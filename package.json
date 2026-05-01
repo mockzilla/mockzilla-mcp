@@ -1,0 +1,39 @@
+{
+  "name": "@mockzilla/mcp",
+  "version": "0.1.0",
+  "description": "MCP server for mockzilla. Lets agents (Claude Desktop, Cursor, etc.) drive mockzilla on a user's behalf: list sims, deploy mocks from the catalog, and more.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "mockzilla",
+    "claude",
+    "cursor",
+    "openapi",
+    "mock",
+    "api"
+  ],
+  "homepage": "https://mockzilla.org",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mockzilla/mockzilla-mcp.git"
+  },
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "mockzilla-mcp": "./bin/cli.js"
+  },
+  "files": [
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "start": "node bin/cli.js"
+  }
+}
