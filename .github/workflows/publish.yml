@@ -26,6 +26,17 @@ jobs:
           corepack prepare npm@latest --activate
           npm --version
 
+      - name: Debug OIDC claims (TEMP — remove after publish works)
+        run: |
+          curl -sLS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=npm:registry.npmjs.org" \
+          | node -e '
+            const t = JSON.parse(require("fs").readFileSync(0, "utf8")).value;
+            const p = t.split(".")[1];
+            const json = Buffer.from(p, "base64url").toString("utf8");
+            console.log(JSON.stringify(JSON.parse(json), null, 2));
+          '
+
       - name: Verify release tag matches package.json version
         run: |
           tag="${GITHUB_REF_NAME#v}"
