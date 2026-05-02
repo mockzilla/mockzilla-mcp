@@ -65,6 +65,29 @@ Or edit `~/.cursor/mcp.json` directly:
 }
 ```
 
+### Gemini CLI
+
+One-liner, no config editing:
+
+```
+gemini mcp add -s user mockzilla npx -y @mockzilla/mcp@latest
+```
+
+`-s user` writes to `~/.gemini/settings.json` (available in every project). Drop `-s user` (or use `-s project`) to scope to the current directory's `.gemini/settings.json`.
+
+Or edit the settings file directly:
+
+```json
+{
+  "mcpServers": {
+    "mockzilla": {
+      "command": "npx",
+      "args": ["-y", "@mockzilla/mcp@latest"]
+    }
+  }
+}
+```
+
 Restart the client after editing config.
 
 > **Why `@latest`?** Without it, npx caches the first resolved version

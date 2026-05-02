@@ -19,7 +19,10 @@ import { hasToken, proxy } from "../lib/proxy.js";
 import { LOCAL_TOOLS } from "../lib/tools.js";
 import { bridgeVersion, latestPublishedVersion } from "../lib/version.js";
 
-const PROTOCOL_VERSION = "2024-11-05";
+// Protocol versions we know how to speak. Order doesn't matter for
+// matching, but the first entry is what we fall back to if the client
+// asks for something we don't recognise.
+const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 
 // Warm the npm "latest" cache in the background so `bridge_status` is
 // instant when the agent calls it. Failure here is silent — the tool
@@ -67,8 +70,16 @@ async function handle(payload) {
 
   if (method === "initialize") {
     const version = await bridgeVersion();
+
+    // Echo the client's protocol version when we support it; some
+    // clients (e.g. Gemini CLI) hard-disconnect on a mismatch even
+    // though the MCP spec allows the server to pick its own.
+    const requested = params?.protocolVersion;
+    const protocolVersion = SUPPORTED_PROTOCOL_VERSIONS.includes(requested)
+      ? requested
+      : SUPPORTED_PROTOCOL_VERSIONS[0];
     return reply(id, {
-      protocolVersion: PROTOCOL_VERSION,
+      protocolVersion,
       capabilities: { tools: { listChanged: false } },
       serverInfo: { name: "mockzilla-bridge", version },
     });
