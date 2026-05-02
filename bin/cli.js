@@ -22,7 +22,12 @@ import { bridgeVersion, latestPublishedVersion } from "../lib/version.js";
 // Protocol versions we know how to speak. Order doesn't matter for
 // matching, but the first entry is what we fall back to if the client
 // asks for something we don't recognise.
-const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
+const SUPPORTED_PROTOCOL_VERSIONS = [
+  "2025-11-25",
+  "2025-06-18",
+  "2025-03-26",
+  "2024-11-05",
+];
 
 // Warm the npm "latest" cache in the background so `bridge_status` is
 // instant when the agent calls it. Failure here is silent — the tool
@@ -87,6 +92,12 @@ async function handle(payload) {
 
   if (method === "notifications/initialized") {
     return null;
+  }
+
+  // Standard MCP keepalive. Gemini CLI's connection probe pings on
+  // startup and treats a -32601 here as a hard disconnect.
+  if (method === "ping") {
+    return reply(id, {});
   }
 
   if (method === "tools/list") {
