@@ -1,6 +1,6 @@
 {
   "name": "@mockzilla/mcp",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "MCP server for mockzilla. Lets agents (Claude Desktop, Cursor, etc.) install the mockzilla CLI, run portable mock servers locally, mock individual endpoints, peek at OpenAPI specs, and — with an account — deploy hosted bundles on mockzilla.org.",
   "keywords": [
     "mcp",
