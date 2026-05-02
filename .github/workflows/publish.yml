@@ -17,8 +17,14 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
-      # Trusted Publishing landed in npm 11.5.1; setup-node ships an older npm.
-      - run: npm install -g npm@latest
+      # Trusted Publishing landed in npm 11.5.1; setup-node ships an
+      # older npm. Use corepack rather than `npm install -g npm@latest`
+      # because the latter occasionally leaves npm in a half-installed
+      # state where transitive deps go missing (e.g. promise-retry).
+      - run: |
+          corepack enable
+          corepack prepare npm@latest --activate
+          npm --version
 
       - name: Verify release tag matches package.json version
         run: |
