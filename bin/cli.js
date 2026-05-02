@@ -1,27 +1,30 @@
 #!/usr/bin/env node
-// Stdio MCP proxy: reads JSON-RPC frames on stdin, posts each to the
-// hosted mockzilla MCP endpoint with the user's bearer token, and writes
-// the response back to stdout.
+// MCP server for mockzilla. Stdio JSON-RPC entry point.
 //
-// Auth: set MOCKZILLA_TOKEN to an OAuth-issued bearer (mz_oauth_*) or a
-// dashboard-created API key (mz_*). The OAuth flow is the supported path
-// for end-users; manual keys are an escape hatch.
+// Two planes of tools live behind this entry:
 //
-// Endpoint: defaults to https://app.mockzilla.org/mcp/. Override with
-// MOCKZILLA_MCP_URL for staging or self-hosted.
+// • Local tools (no auth needed): inspect the user's machine, run a
+//   portable mock server locally, peek at a spec, install the mockzilla
+//   CLI itself if missing. Always available. See lib/tools.js.
+//
+// • Hosted tools (account-scoped): proxied to the hosted MCP endpoint
+//   (`/mcp/`) when MOCKZILLA_TOKEN is set. Without a token, the local
+//   plane is the entire surface and the agent can still help the user
+//   explore mockzilla before they sign up. See lib/proxy.js.
 
 import { createInterface } from "node:readline";
 
-const ENDPOINT = process.env.MOCKZILLA_MCP_URL || "https://app.mockzilla.org/mcp/";
-const TOKEN = process.env.MOCKZILLA_TOKEN;
+import { killAllLocal } from "../lib/local.js";
+import { hasToken, proxy } from "../lib/proxy.js";
+import { LOCAL_TOOLS } from "../lib/tools.js";
+import { bridgeVersion, latestPublishedVersion } from "../lib/version.js";
 
-if (!TOKEN) {
-  process.stderr.write(
-    "MOCKZILLA_TOKEN is not set. Run `npx mockzilla-mcp` with the env var set,\n" +
-      "or add it to your MCP client config under `env`.\n",
-  );
-  process.exit(1);
-}
+const PROTOCOL_VERSION = "2024-11-05";
+
+// Warm the npm "latest" cache in the background so `bridge_status` is
+// instant when the agent calls it. Failure here is silent — the tool
+// will retry on demand.
+latestPublishedVersion().catch(() => {});
 
 const rl = createInterface({ input: process.stdin, crlfDelay: Infinity });
 
@@ -38,39 +41,106 @@ rl.on("line", async (raw) => {
   }
 
   try {
-    const response = await postToServer(payload);
+    const response = await handle(payload);
     if (response !== null) {
       process.stdout.write(JSON.stringify(response) + "\n");
     }
   } catch (err) {
-    writeError(payload?.id ?? null, -32603, `Transport error: ${err.message}`);
+    writeError(payload?.id ?? null, -32603, `Internal error: ${err.message}`);
   }
 });
 
-rl.on("close", () => process.exit(0));
+rl.on("close", () => {
+  killAllLocal();
+  process.exit(0);
+});
 
-async function postToServer(payload) {
-  const res = await fetch(ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${TOKEN}`,
-    },
-    body: JSON.stringify(payload),
+for (const sig of ["SIGINT", "SIGTERM"]) {
+  process.on(sig, () => {
+    killAllLocal();
+    process.exit(0);
   });
+}
 
-  if (res.status === 204) return null;
+async function handle(payload) {
+  const { id, method, params = {} } = payload ?? {};
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`${res.status} ${res.statusText}: ${text.slice(0, 200)}`);
+  if (method === "initialize") {
+    const version = await bridgeVersion();
+    return reply(id, {
+      protocolVersion: PROTOCOL_VERSION,
+      capabilities: { tools: { listChanged: false } },
+      serverInfo: { name: "mockzilla-bridge", version },
+    });
   }
 
-  return res.json();
+  if (method === "notifications/initialized") {
+    return null;
+  }
+
+  if (method === "tools/list") {
+    const local = Object.entries(LOCAL_TOOLS).map(([name, t]) => ({
+      name,
+      description: t.description,
+      inputSchema: t.inputSchema,
+    }));
+    if (!hasToken) {
+      return reply(id, { tools: local });
+    }
+    const upstream = await proxy(payload);
+    const hostedTools = upstream?.result?.tools ?? [];
+    return reply(id, { tools: [...local, ...hostedTools] });
+  }
+
+  if (method === "tools/call") {
+    const name = params?.name;
+    if (typeof name === "string" && name in LOCAL_TOOLS) {
+      const args = params.arguments ?? {};
+      try {
+        const result = await LOCAL_TOOLS[name].handler(args);
+        return reply(id, {
+          content: [{ type: "text", text: JSON.stringify(result) }],
+          isError: false,
+        });
+      } catch (err) {
+        return reply(id, {
+          content: [{ type: "text", text: `Tool error: ${err.message}` }],
+          isError: true,
+        });
+      }
+    }
+
+    if (!hasToken) {
+      return reply(id, {
+        content: [
+          {
+            type: "text",
+            text:
+              `Tool "${name}" needs a mockzilla account. Set ` +
+              `MOCKZILLA_TOKEN in your MCP client config to use it.`,
+          },
+        ],
+        isError: true,
+      });
+    }
+    return await proxy(payload);
+  }
+
+  if (!hasToken) {
+    return errorResponse(id, -32601, `Unknown method: ${method}`);
+  }
+  return await proxy(payload);
+}
+
+function reply(id, result) {
+  if (id === undefined || id === null) return null;
+  return { jsonrpc: "2.0", id, result };
+}
+
+function errorResponse(id, code, message) {
+  return { jsonrpc: "2.0", id, error: { code, message } };
 }
 
 function writeError(id, code, message) {
-  process.stdout.write(
-    JSON.stringify({ jsonrpc: "2.0", id, error: { code, message } }) + "\n",
-  );
+  process.stdout.write(JSON.stringify(errorResponse(id, code, message)) + "\n");
 }

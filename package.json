@@ -1,7 +1,7 @@
 {
   "name": "@mockzilla/mcp",
-  "version": "0.1.0",
-  "description": "MCP server for mockzilla. Lets agents (Claude Desktop, Cursor, etc.) drive mockzilla on a user's behalf: list sims, deploy mocks from the catalog, and more.",
+  "version": "0.2.0",
+  "description": "MCP server for mockzilla. Lets agents (Claude Desktop, Cursor, etc.) install the mockzilla CLI, run portable mock servers locally, mock individual endpoints, peek at OpenAPI specs, and — with an account — deploy hosted bundles on mockzilla.org.",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -24,6 +24,7 @@
   },
   "files": [
     "bin",
+    "lib",
     "README.md",
     "LICENSE"
   ],

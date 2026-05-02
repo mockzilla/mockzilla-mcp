@@ -1,0 +1,32 @@
+name: publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # OIDC token for npm Trusted Publishing + provenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # Trusted Publishing landed in npm 11.5.1; setup-node ships an older npm.
+      - run: npm install -g npm@latest
+
+      - name: Verify release tag matches package.json version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "release tag $GITHUB_REF_NAME (=$tag) != package.json version $pkg" >&2
+            exit 1
+          fi
+
+      - run: npm publish --provenance --access public
