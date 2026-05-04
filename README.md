@@ -143,7 +143,7 @@ it includes `get_context`, `list_sims`, `list_catalog_products`,
 | Env var | Default | Purpose |
 | --- | --- | --- |
 | `MOCKZILLA_TOKEN` | unset | Bearer token (`mz_oauth_*` or `mz_*`). Hosted tools are hidden when unset. |
-| `MOCKZILLA_MCP_URL` | `https://mockzilla.org/mcp/` | Override the hosted endpoint (staging, self-hosted). |
+| `MOCKZILLA_MCP_URL` | `https://app.mockzilla.org/mcp/` | Override the hosted endpoint (staging, self-hosted). |
 | `MOCKZILLA_BIN_VERSION` | matches bridge version | Pin a specific mockzilla CLI version for `install_cli` to fetch. |
 | `MOCKZILLA_MANAGED_PORT` | `2200` | Preferred port for the `mock_endpoint` server (mockzilla's standard). Falls back to a kernel-picked port if busy. Pick something out of the way — avoid 3000 (Next.js/React), 5173 (Vite), 8080. Try 2400 or 4444 if 2200 is unavailable. |
 | `MOCKZILLA_DOCS_DIR` | unset | Read docs from this local directory instead of fetching from GitHub. Useful when editing docs and wanting instant feedback. |

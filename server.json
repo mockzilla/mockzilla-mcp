@@ -1,0 +1,40 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.mockzilla/mockzilla-mcp",
+  "description": "MCP server for mockzilla. Lets agents (Claude Desktop, Cursor, etc.) install the mockzilla CLI, run portable mock servers locally, mock individual endpoints, peek at OpenAPI specs, and — with an account — deploy hosted bundles on mockzilla.org.",
+  "version": "0.2.7",
+  "websiteUrl": "https://mockzilla.org",
+  "repository": {
+    "url": "https://github.com/mockzilla/mockzilla-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@mockzilla/mcp",
+      "version": "0.2.7",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "MOCKZILLA_TOKEN",
+          "description": "Bearer token (mz_oauth_* or mz_*) that unlocks the hosted plane on mockzilla.org. Leave unset to use only the local plane.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "MOCKZILLA_MCP_URL",
+          "description": "Override the hosted MCP endpoint (staging or self-hosted). Defaults to https://app.mockzilla.org/mcp/.",
+          "isRequired": false
+        },
+        {
+          "name": "MOCKZILLA_MANAGED_PORT",
+          "description": "Preferred port for the local managed mock server. Defaults to 2200; falls back to a kernel-picked port if busy.",
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}
