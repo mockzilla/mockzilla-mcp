@@ -1,8 +1,8 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.mockzilla/mockzilla-mcp",
-  "description": "MCP server for mockzilla. Lets agents (Claude Desktop, Cursor, etc.) install the mockzilla CLI, run portable mock servers locally, mock individual endpoints, peek at OpenAPI specs, and — with an account — deploy hosted bundles on mockzilla.org.",
-  "version": "0.2.7",
+  "description": "Let your AI agent stand up API mocks - from an OpenAPI spec or one endpoint at a time.",
+  "version": "0.2.8",
   "websiteUrl": "https://mockzilla.org",
   "repository": {
     "url": "https://github.com/mockzilla/mockzilla-mcp",
@@ -13,7 +13,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@mockzilla/mcp",
-      "version": "0.2.7",
+      "version": "0.2.8",
       "transport": {
         "type": "stdio"
       },
