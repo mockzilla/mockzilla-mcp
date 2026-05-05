@@ -2,16 +2,25 @@
   "name": "@mockzilla/mcp",
   "version": "0.2.8",
   "mcpName": "io.github.mockzilla/mockzilla-mcp",
-  "description": "MCP server for mockzilla. Lets agents (Claude Desktop, Cursor, etc.) install the mockzilla CLI, run portable mock servers locally, mock individual endpoints, peek at OpenAPI specs, and — with an account — deploy hosted bundles on mockzilla.org.",
+  "description": "MCP server for Mockzilla (github.com/mockzilla/mockzilla-mcp). Lets Claude, Cursor, and Gemini CLI install the Mockzilla CLI, run local mock servers from OpenAPI specs, mock individual endpoints, and deploy hosted simulations on mockzilla.org.",
   "keywords": [
+    "mockzilla",
     "mcp",
     "model-context-protocol",
-    "mockzilla",
     "claude",
+    "claude-code",
+    "claude-desktop",
     "cursor",
+    "gemini-cli",
     "openapi",
     "mock",
-    "api"
+    "mock-server",
+    "api-mocking",
+    "api-simulation",
+    "api-testing",
+    "ci-cd",
+    "developer-tools",
+    "ai-tools"
   ],
   "homepage": "https://mockzilla.org",
   "repository": {

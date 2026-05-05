@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.mockzilla/mockzilla-mcp",
-  "description": "Let your AI agent stand up API mocks - from an OpenAPI spec or one endpoint at a time.",
+  "description": "Mockzilla MCP server. Mock any OpenAPI spec locally with Claude, Cursor, or Gemini CLI.",
   "version": "0.2.8",
   "websiteUrl": "https://mockzilla.org",
   "repository": {

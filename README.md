@@ -1,8 +1,8 @@
 # @mockzilla/mcp
 
-MCP server for [mockzilla](https://mockzilla.org). Lets agents like
-Claude Desktop and Cursor drive mockzilla on a user's behalf — and lets
-them help users *try* mockzilla without an account first.
+MCP server for [Mockzilla](https://mockzilla.org/) — an open-source API simulation platform. Serve realistic mock APIs from any OpenAPI spec locally in seconds, directly from Claude Code, Claude Desktop, Cursor, or Gemini CLI. No account required for local use.
+
+Source: [github.com/mockzilla/mockzilla-mcp](https://github.com/mockzilla/mockzilla-mcp)
 
 The bridge exposes two planes of tools:
 
