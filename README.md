@@ -187,6 +187,26 @@ in `lib/install.js`). Updating the bridge updates the pin; the next
 See [`CLAUDE.md`](./CLAUDE.md) for project conventions and a walkthrough
 of adding a new tool.
 
+## Releasing
+
+The bridge has two registries to keep in lockstep: npm (`@mockzilla/mcp`)
+and the MCP registry (`server.json`). Skipping the second one leaves
+discovery clients pinned to the previous tarball.
+
+1. Bump `version` in `package.json`.
+2. `make publish-all` — runs the smoke test, `npm publish`s the new
+   tarball, mirrors the version into `server.json`, then runs
+   `mcp-publisher publish`.
+3. Commit the `server.json` bump.
+
+If you only want one side: `make publish` for npm only, `make publish-mcp`
+for the MCP registry only. `make publish-mcp` always re-syncs
+`server.json` from `package.json` first, so the registry record can't
+drift below the npm version.
+
+`mcp-publisher` must be on `PATH` (`brew install mcp-publisher` or
+follow the [installation docs](https://github.com/modelcontextprotocol/registry)).
+
 ## License
 
 MIT.

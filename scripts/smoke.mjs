@@ -27,12 +27,16 @@ const firstResponse = new Promise((resolve, reject) => {
   setTimeout(() => reject(new Error("smoke: timed out after 5s")), 5000);
 });
 
+// Pick a protocol version the server is known to speak; the server
+// echoes it back when supported, so this also validates the echo path.
+const PROTOCOL_VERSION = "2024-11-05";
+
 child.stdin.write(
   JSON.stringify({
     jsonrpc: "2.0",
     id: 1,
     method: "initialize",
-    params: {},
+    params: { protocolVersion: PROTOCOL_VERSION },
   }) + "\n",
 );
 
@@ -43,8 +47,13 @@ try {
   if (!child.killed) child.kill("SIGTERM");
 }
 
-if (response?.result?.protocolVersion !== "2024-11-05") {
+if (response?.result?.protocolVersion !== PROTOCOL_VERSION) {
   console.error("smoke: unexpected response:", JSON.stringify(response));
+  process.exit(1);
+}
+
+if (response?.result?.serverInfo?.name !== "mockzilla-bridge") {
+  console.error("smoke: missing serverInfo.name:", JSON.stringify(response));
   process.exit(1);
 }
 
