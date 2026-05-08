@@ -1,6 +1,6 @@
 # @mockzilla/mcp
 
-MCP server for [Mockzilla](https://mockzilla.org/) — an open-source API simulation platform. Serve realistic mock APIs from any OpenAPI spec locally in seconds, directly from Claude Code, Claude Desktop, Cursor, or Gemini CLI. No account required for local use.
+MCP server for [Mockzilla](https://mockzilla.org/) - an open-source API simulation platform. Serve realistic mock APIs from any OpenAPI spec locally in seconds, directly from Claude Code, Claude Desktop, Cursor, or Gemini CLI. No account required for local use.
 
 Source: [github.com/mockzilla/mockzilla-mcp](https://github.com/mockzilla/mockzilla-mcp)
 
@@ -14,7 +14,7 @@ The bridge exposes two planes of tools:
   endpoint when `MOCKZILLA_TOKEN` is set. List sims, deploy bundles
   from the catalog, etc.
 
-Without a token, the local plane is the entire surface — agents can
+Without a token, the local plane is the entire surface - agents can
 still help users explore mockzilla before they sign up.
 
 ## Install
