@@ -194,7 +194,7 @@ and the MCP registry (`server.json`). Skipping the second one leaves
 discovery clients pinned to the previous tarball.
 
 1. Bump `version` in `package.json`.
-2. `make publish-all` — runs the smoke test, `npm publish`s the new
+2. `make publish-all` - runs the smoke test, `npm publish`s the new
    tarball, mirrors the version into `server.json`, then runs
    `mcp-publisher publish`.
 3. Commit the `server.json` bump.
