@@ -134,7 +134,7 @@ Restart the client after editing config.
 ### Hosted
 
 Available when `MOCKZILLA_TOKEN` is set. Forwarded to mockzilla.org. See
-the hosted server's docs for the live tool list — at the time of writing
+the hosted server's docs for the live tool list - at the time of writing
 it includes `get_context`, `list_sims`, `list_catalog_products`,
 `deploy_mock_from_{catalog,spec,url}`, and `wait_for_deploy`.
 
@@ -145,7 +145,7 @@ it includes `get_context`, `list_sims`, `list_catalog_products`,
 | `MOCKZILLA_TOKEN` | unset | Bearer token (`mz_oauth_*` or `mz_*`). Hosted tools are hidden when unset. |
 | `MOCKZILLA_MCP_URL` | `https://app.mockzilla.org/mcp/` | Override the hosted endpoint (staging, self-hosted). |
 | `MOCKZILLA_BIN_VERSION` | matches bridge version | Pin a specific mockzilla CLI version for `install_cli` to fetch. |
-| `MOCKZILLA_MANAGED_PORT` | `2200` | Preferred port for the `mock_endpoint` server (mockzilla's standard). Falls back to a kernel-picked port if busy. Pick something out of the way — avoid 3000 (Next.js/React), 5173 (Vite), 8080. Try 2400 or 4444 if 2200 is unavailable. |
+| `MOCKZILLA_MANAGED_PORT` | `2200` | Preferred port for the `mock_endpoint` server (mockzilla's standard). Falls back to a kernel-picked port if busy. Pick something out of the way - avoid 3000 (Next.js/React), 5173 (Vite), 8080. Try 2400 or 4444 if 2200 is unavailable. |
 | `MOCKZILLA_DOCS_DIR` | unset | Read docs from this local directory instead of fetching from GitHub. Useful when editing docs and wanting instant feedback. |
 | `MOCKZILLA_DOCS_REPO` | `mockzilla/mockzilla` | Override the GitHub repo to fetch docs from. |
 | `MOCKZILLA_DOCS_BRANCH` | `main` | Override the branch to fetch docs from. |
@@ -172,7 +172,7 @@ The bridge ships frequently; recommended way to stay current:
 
 1. Pin `@mockzilla/mcp@latest` in your MCP client config (see install
    snippets above) so npx re-checks the registry on every spawn.
-2. Restart Claude Desktop / Cursor periodically — that's when the new
+2. Restart Claude Desktop / Cursor periodically - that's when the new
    version is fetched.
 3. If something breaks, ask the agent: *"Run `bridge_status` and tell
    me if mockzilla-mcp is up to date."* If it's stale, run
