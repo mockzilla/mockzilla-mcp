@@ -1,7 +1,7 @@
 # mockzilla-mcp — pure-JS, no build step. Targets are thin wrappers
 # around node/npm so common dev actions have one canonical command.
 
-.PHONY: help smoke start clean publish-dry publish publish-mcp publish-all sync-server-json version
+.PHONY: help smoke start clean publish-dry publish publish-mcp publish-all login-mcp sync-server-json version
 
 help:
 	@echo "Targets:"
@@ -13,6 +13,7 @@ help:
 	@echo "  publish         Smoke-test then npm publish (uses package.json version)"
 	@echo "  publish-mcp     Sync server.json then mcp-publisher publish"
 	@echo "  publish-all     publish + publish-mcp (do this every release)"
+	@echo "  login-mcp       Authenticate mcp-publisher via GitHub OAuth"
 
 smoke:
 	node scripts/smoke.mjs
@@ -40,5 +41,9 @@ publish: smoke
 
 publish-mcp: sync-server-json
 	mcp-publisher publish
+
+# Re-run when mcp-publisher errors with "not authenticated" / expired token.
+login-mcp:
+	mcp-publisher login github
 
 publish-all: publish publish-mcp
