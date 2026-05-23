@@ -214,7 +214,7 @@ Refer to the hosted server's docs or the MCP registry entry for the live tool li
 | Env var | Default | Purpose |
 |---------|---------|---------|
 | `MOCKZILLA_TOKEN` | unset | Bearer token (`mz_oauth_*` or `mz_*`). Hosted tools are hidden when unset. |
-| `MOCKZILLA_MCP_URL` | `https://app.mockzilla.org/mcp/` | Override the hosted endpoint (staging, self-hosted). |
+| `MOCKZILLA_MCP_URL` | `https://platform.mockzilla.org/mcp/` | Override the hosted endpoint (staging, self-hosted). |
 | `MOCKZILLA_BIN_VERSION` | matches bridge version | Pin a specific Mockzilla CLI version for `install_cli` to fetch. |
 | `MOCKZILLA_MANAGED_PORT` | `2200` | Preferred port for the `mock_endpoint` server. Falls back to a kernel-picked port if busy. Avoid 3000 (Next.js/React), 5173 (Vite), 8080. Try 2400 or 4444 if 2200 is unavailable. |
 | `MOCKZILLA_DOCS_DIR` | unset | Read docs from this local directory instead of GitHub (useful when editing docs). |
@@ -294,6 +294,6 @@ If you only want one side:
 
 ## License
 
-Copyright © 2023-present
+Copyright © 2026-present
 
 Licensed under the [MIT License](https://github.com/mockzilla/mockzilla-mcp/blob/main/LICENSE)
