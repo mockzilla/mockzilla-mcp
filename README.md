@@ -175,10 +175,10 @@ These tools are always available and never leave the user's machine.
   Scan a directory for OpenAPI specs and folders of static endpoint files. Returns a `suggested_input` for `serve_locally`.
 
 - **`mockzilla_docs_topics`**
-  List available Mockzilla doc topics.
+  List the Mockzilla docs, by category, with each topic's title and summary. The product docs from mockzilla.org and the engine docs both ship inside the package, so no network or login is needed.
 
 - **`mockzilla_docs_read`**
-  Return the full markdown for one topic.
+  Return the full markdown for one or more topics, or a whole category.
 
 - **`mockzilla_docs_search`**
   Keyword search across all docs; returns top sections with snippets.
@@ -245,9 +245,7 @@ On a machine without a browser, such as CI or a remote server, set `MOCKZILLA_TO
 | `MOCKZILLA_MCP_CLIENT_ID` | `https://mockzilla.org/mcp-client.json` | OAuth client id `login` uses. Override only for local development, e.g. with a client registered on a local server. |
 | `MOCKZILLA_BIN_VERSION` | matches bridge version | Pin a specific Mockzilla CLI version for `install_cli` to fetch. |
 | `MOCKZILLA_MANAGED_PORT` | `2200` | Preferred port for the `mock_endpoint` server. Falls back to a kernel-picked port if busy. Avoid 3000 (Next.js/React), 5173 (Vite), 8080. Try 2400 or 4444 if 2200 is unavailable. |
-| `MOCKZILLA_DOCS_DIR` | unset | Read docs from this local directory instead of GitHub (useful when editing docs). |
-| `MOCKZILLA_DOCS_REPO` | `mockzilla/mockzilla` | Override the GitHub repo to fetch docs from. |
-| `MOCKZILLA_DOCS_BRANCH` | `main` | Override the branch to fetch docs from. |
+| `MOCKZILLA_DOCS_DIR` | unset | Read docs from another build of `docs/`, made by `scripts/sync-docs.mjs`, instead of the packaged one. |
 
 ## Files
 
@@ -304,7 +302,8 @@ The bridge has two registries to keep in sync: npm (`@mockzilla/mcp`) and the MC
    ```
 
    This will:
-   - Run the smoke tests: the stdio round-trip, login against a fake OAuth server, and `mock_endpoint` against the real CLI (skipped when no CLI is installed).
+   - Build `docs/`: the product docs Mockzilla published, which needs read access to its docs bucket, plus the engine docs at the pinned CLI version.
+   - Run the smoke tests: the stdio round-trip, login against a fake OAuth server, the docs tools, and `mock_endpoint` against the real CLI (skipped when no CLI is installed).
    - `npm publish` the new tarball.
    - Mirror the version into `server.json`.
    - Log `mcp-publisher` in with the GitHub token from Keychain (see below).
@@ -334,7 +333,9 @@ One-time setup:
 
 ### From GitHub Actions
 
-Publishing a GitHub release named `v<package.json version>` runs `.github/workflows/publish-mcp.yml`. It skips versions the MCP registry already has, waits up to 10 minutes for the version to appear on npm, then publishes `server.json` using GitHub OIDC, so no token is needed. It can also be started by hand from the Actions tab.
+npm publish from GitHub is disabled for now, so release with `make publish-all`.
+
+`.github/workflows/publish-mcp.yml` runs only when started by hand from the Actions tab. It skips versions the MCP registry already has, waits up to 10 minutes for the version to appear on npm, then publishes `server.json` using GitHub OIDC, so no token is needed.
 
 ## Related
 

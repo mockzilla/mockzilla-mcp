@@ -6,6 +6,7 @@ on:
 
 jobs:
   publish:
+    if: false  # TEMP: npm publish disabled, it cannot build the docs; publish with make publish
     runs-on: ubuntu-latest
     permissions:
       contents: read

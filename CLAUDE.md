@@ -11,8 +11,9 @@ lib/tools.js   The local tool registry (descriptions + handler refs).
 lib/install.js check_cli, install_cli, resolveMockzilla, cache helpers.
 lib/local.js   serve_locally, stop_locally, info, child tracking.
 lib/discover.js discover_specs (filesystem scan + spec summaries).
-lib/docs.js    mockzilla_docs_{topics,read,search}; raw GitHub source +
-               MOCKZILLA_DOCS_DIR override for contributors editing docs.
+lib/docs.js    mockzilla_docs_{topics,read,search}, served from the packaged
+               docs/ (MOCKZILLA_DOCS_DIR points at another build).
+docs/          Built by `make build`, not in git. Ships in the npm tarball.
 lib/version.js Bridge version + npm registry update check (bridge_status).
 lib/auth.js    Hosted-plane login: OAuth in the browser, saved tokens, refresh.
 lib/proxy.js   Hosted-plane forwarding with the saved login or MOCKZILLA_TOKEN.
@@ -158,6 +159,32 @@ Hosted tools are defined in the Django repo at
 `app/mcp/tools.py:REGISTRY` — not here. The bridge auto-discovers them
 via `tools/list` proxying. When you add one there, restart the bridge
 (or Claude Desktop) and the new tool appears in the merged list.
+
+## Docs
+
+`docs/` ships in the npm package, so the docs tools answer from local files:
+no network, no login, and no URL for the agent to fetch. It holds `index.json`
+(categories, and each topic's id, title, summary and public URL) plus one
+markdown file per topic. It is built, not committed: run `make build` before
+running the bridge from a checkout.
+
+Two sources, both built by `scripts/sync-docs.mjs`:
+
+- **Product docs.** Django's `publish_docs` writes `export/mcp.json` to the
+  docs bucket. `make build` copies it, which needs prod read access. Edit the
+  docs in the Django admin. CI builds from `scripts/fixtures/mcp.json` instead.
+- **Engine docs.** The `docs/` folder of github.com/mockzilla/mockzilla at the
+  tag `MOCKZILLA_VERSION` pins, so they describe the CLI the bridge installs.
+  `MOCKZILLA_ENGINE_DIR=../mockzilla` reads a local checkout instead.
+
+The script turns a link to another topic into that topic's id and an image into
+its alt text, so nothing in a topic tempts the agent to fetch a URL.
+
+A docs change reaches agents with the next release: publish the docs, then
+`make publish-all`, which builds first. GitHub's npm publish is disabled for
+now, since it has no access to the bucket, and the MCP registry workflow only
+runs when started by hand. To preview unpublished docs, run
+`make docs-mcp-dump` in the django repo, then `make build-local` here.
 
 ## Versioning
 

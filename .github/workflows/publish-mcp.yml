@@ -1,8 +1,9 @@
 name: publish-mcp
 
 on:
-  release:
-    types: [published]
+  # TEMP: not on release while npm publish runs from make publish; start it by hand.
+  # release:
+  #   types: [published]
   workflow_dispatch:
 
 jobs:
