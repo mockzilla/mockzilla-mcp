@@ -17,6 +17,7 @@ docs/          Built by `make build`, not in git. Ships in the npm tarball.
 lib/version.js Bridge version + npm registry update check (bridge_status).
 lib/auth.js    Hosted-plane login: OAuth in the browser, saved tokens, refresh.
 lib/proxy.js   Hosted-plane forwarding with the saved login or MOCKZILLA_TOKEN.
+lib/hosted.js  Hosted tool definitions packed at build, listed before login.
 lib/util.js    Tiny shared helpers (shellEscape).
 ```
 
@@ -28,8 +29,7 @@ JSON-RPC loop and delegates everything else.
 - **Local plane.** Tools that touch the user's machine. Defined in
   `lib/tools.js`, handlers live in `lib/install.js` or `lib/local.js`.
   Always available — no auth, no token.
-- **Hosted plane.** Tools the Django server defines at
-  `app/mcp/tools.py`. Proxied through once the user logs in with the
+- **Hosted plane.** Tools the hosted Mockzilla server defines. Proxied through once the user logs in with the
   `login` tool (or `MOCKZILLA_TOKEN` is set). The bridge is its own OAuth
   client: it identifies itself with the metadata document at
   `https://mockzilla.org/mcp-client.json` and catches the callback on
@@ -38,6 +38,11 @@ JSON-RPC loop and delegates everything else.
   tokens rotate, and reusing one revokes the connection).
   When the bridge sees a `tools/call` for a name it doesn't recognise
   locally, it forwards to the hosted endpoint.
+  Hosted tools are listed before login too, from `hosted-tools.json` packed
+  at build: not every client re-reads the tool list when a login lands
+  (Claude Desktop didn't). Calling one before login returns a tool error
+  asking the agent to log in and call it again. After login the live list
+  from the hosted server replaces the packed one.
 
 Tool names must not collide — local tools always win the dispatch, so a
 local tool with the same name as a hosted one would shadow it.
@@ -155,10 +160,11 @@ after.
 
 ## Adding a hosted tool
 
-Hosted tools are defined in the Django repo at
-`app/mcp/tools.py:REGISTRY` — not here. The bridge auto-discovers them
-via `tools/list` proxying. When you add one there, restart the bridge
-(or Claude Desktop) and the new tool appears in the merged list.
+Hosted tools are defined on the hosted server, not here. After login the
+bridge reads them live through `tools/list`. Before login it lists the copy in
+`hosted-tools.json`, which `make build` takes from the same published bundle as
+the docs. So a new hosted tool reaches logged-out agents only once the bundle is
+republished and the bridge is released.
 
 ## Docs
 
@@ -168,11 +174,12 @@ no network, no login, and no URL for the agent to fetch. It holds `index.json`
 markdown file per topic. It is built, not committed: run `make build` before
 running the bridge from a checkout.
 
-Two sources, both built by `scripts/sync-docs.mjs`:
+Two sources, both built by `scripts/build.mjs`, which also writes `hosted-tools.json`:
 
-- **Product docs.** Django's `publish_docs` writes `export/mcp.json` to the
-  docs bucket. `make build` copies it, which needs prod read access. Edit the
-  docs in the Django admin. CI builds from `scripts/fixtures/mcp.json` instead.
+- **Product docs.** Mockzilla publishes them, with the hosted tool
+  definitions, as one bundle. `make build` fetches it with `DOCS_BUNDLE_CMD`,
+  set in `local.mk`, which git ignores. CI builds from
+  `scripts/fixtures/mcp.json` instead.
 - **Engine docs.** The `docs/` folder of github.com/mockzilla/mockzilla at the
   tag `MOCKZILLA_VERSION` pins, so they describe the CLI the bridge installs.
   `MOCKZILLA_ENGINE_DIR=../mockzilla` reads a local checkout instead.
@@ -182,9 +189,9 @@ its alt text, so nothing in a topic tempts the agent to fetch a URL.
 
 A docs change reaches agents with the next release: publish the docs, then
 `make publish-all`, which builds first. GitHub's npm publish is disabled for
-now, since it has no access to the bucket, and the MCP registry workflow only
-runs when started by hand. To preview unpublished docs, run
-`make docs-mcp-dump` in the django repo, then `make build-local` here.
+now, since it cannot fetch the bundle, and the MCP registry workflow only
+runs when started by hand. To preview an unpublished bundle, save it as
+`.docs-platform.json` and run `make build-local`.
 
 ## Versioning
 

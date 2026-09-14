@@ -1,5 +1,6 @@
-// Builds docs/ for the npm release from Django's export/mcp.json plus the engine docs at the pinned CLI version.
-// Usage: node scripts/sync-docs.mjs <mcp.json> [out-dir]. MOCKZILLA_ENGINE_DIR reads a local engine checkout instead.
+// Builds what the npm release packs from the published bundle: docs/ (plus the engine docs at the pinned CLI
+// version) and hosted-tools.json. Usage: node scripts/build.mjs <bundle.json> [docs-dir].
+// MOCKZILLA_ENGINE_DIR reads a local engine checkout instead of downloading it.
 
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -9,6 +10,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 
+import { HOSTED_TOOLS_FILE } from "../lib/hosted.js";
 import { MOCKZILLA_VERSION } from "../lib/install.js";
 
 const ENGINE_CATEGORY = {
@@ -25,7 +27,7 @@ const ENGINE_SUMMARIES = { "fake-list.md": "Every fake function a context can us
 
 const [bundlePath, outArg = "docs"] = process.argv.slice(2);
 if (!bundlePath) {
-  console.error("usage: node scripts/sync-docs.mjs <mcp.json> [out-dir]");
+  console.error("usage: node scripts/build.mjs <bundle.json> [docs-dir]");
   process.exit(2);
 }
 
@@ -63,7 +65,13 @@ const index = {
   topics: topics.map((t) => t.meta),
 };
 await writeFile(path.join(out, "index.json"), JSON.stringify(index, null, 2) + "\n");
-console.log(`sync-docs: ${bundle.topics.length} product topics, ${engine.length} engine topics (v${MOCKZILLA_VERSION}) -> ${out}`);
+console.log(`build: ${bundle.topics.length} product topics, ${engine.length} engine topics (v${MOCKZILLA_VERSION}) -> ${out}`);
+
+// A bundle without tools still builds; hosted tools then stay hidden until login.
+const hostedTools = bundle.tools ?? [];
+if (!bundle.tools) console.warn("build: the bundle has no tools, so hosted tools are hidden until login");
+await writeFile(HOSTED_TOOLS_FILE, JSON.stringify({ tools: hostedTools }, null, 2) + "\n");
+console.log(`build: ${hostedTools.length} hosted tools -> ${HOSTED_TOOLS_FILE}`);
 
 async function downloadEngine(version) {
   const url = `https://codeload.github.com/mockzilla/mockzilla/tar.gz/refs/tags/v${version}`;

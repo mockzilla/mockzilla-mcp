@@ -1,10 +1,10 @@
 // Login round-trip against a fake OAuth + MCP server: discovery, the browser
-// redirect, token exchange, hosted tools appearing, refresh after a 401,
-// logout, and MOCKZILLA_TOKEN. Run via `node scripts/login-smoke.mjs`.
+// redirect, token exchange, packed hosted tools listed before login, refresh
+// after a 401, logout, and MOCKZILLA_TOKEN. Run via `node scripts/login-smoke.mjs`.
 
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, stat } from "node:fs/promises";
+import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import http from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -13,6 +13,11 @@ const CLIENT_ID = "https://example.test/mcp-client.json";
 
 const fake = await startFakeServer();
 const configHome = await mkdtemp(path.join(tmpdir(), "mockzilla-mcp-login-"));
+const hostedToolsFile = path.join(configHome, "hosted-tools.json");
+await writeFile(
+  hostedToolsFile,
+  JSON.stringify({ tools: [{ name: "get_context", description: "packed", inputSchema: { type: "object" } }] }),
+);
 
 try {
   await loginFlow();
@@ -29,7 +34,7 @@ async function loginFlow() {
   check(init.result.capabilities.tools.listChanged === true, "listChanged capability");
 
   let names = await toolNames(bridge);
-  check(names.includes("login") && !names.includes("get_context"), "hosted tools hidden before login");
+  check(names.includes("login") && names.includes("get_context"), "packed hosted tools listed before login");
 
   const blocked = await bridge.call("tools/call", { name: "get_context", arguments: {} });
   check(blocked.result.isError && /login/.test(blocked.result.content[0].text), "hosted call asks for login");
@@ -66,7 +71,9 @@ async function loginFlow() {
   check((await gone).method === "notifications/tools/list_changed", "logout announces the change");
   check(fake.state.revoked.length === 1, "logout revokes the connection");
   names = await toolNames(bridge);
-  check(!names.includes("get_context"), "hosted tools hidden after logout");
+  check(names.includes("get_context"), "packed hosted tools still listed after logout");
+  const afterLogout = await bridge.call("tools/call", { name: "get_context", arguments: {} });
+  check(afterLogout.result.isError && /login/.test(afterLogout.result.content[0].text), "hosted call asks for login again");
 
   bridge.stop();
 }
@@ -88,6 +95,7 @@ function startBridge(env) {
       MOCKZILLA_TOKEN: "",
       MOCKZILLA_MCP_URL: `${fake.base}/mcp`,
       MOCKZILLA_MCP_CLIENT_ID: CLIENT_ID,
+      MOCKZILLA_HOSTED_TOOLS_FILE: hostedToolsFile,
       MOCKZILLA_NO_BROWSER: "1",
       XDG_CONFIG_HOME: configHome,
       ...env,

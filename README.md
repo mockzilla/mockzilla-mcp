@@ -32,7 +32,7 @@ From an agent you can:
 
 ### Hosted plane (log in once)
 
-Ask your agent to log in, or ask for something hosted. The agent calls the `login` tool, your browser opens the Mockzilla login, and you pick an organization and read-only or read-and-write access. The bridge keeps the login on your machine and renews it by itself. Hosted tools appear as soon as you approve.
+Ask your agent to log in, or ask for something hosted. The agent calls the `login` tool, your browser opens the Mockzilla login, and you pick an organization and read-only or read-and-write access. The bridge keeps the login on your machine and renews it by itself. Hosted tools are listed from the start; before you log in, the agent is told to log in first.
 
 Agents can then:
 
@@ -214,14 +214,14 @@ These tools are always available and never leave the user's machine.
 ### Account
 
 - **`login`**
-  Opens the Mockzilla login in the browser, where the user picks an organization and read-only or read-and-write access. Returns right away with the login link, and hosted tools appear once the user approves. The login is saved under `~/.config/mockzilla-mcp/`, one per server URL, and renewed automatically.
+  Opens the Mockzilla login in the browser, where the user picks an organization and read-only or read-and-write access. Returns right away with the login link. The agent calls a hosted tool again once the user approves. The login is saved under `~/.config/mockzilla-mcp/`, one per server URL, and renewed automatically.
 
 - **`logout`**
   Revokes the connection and deletes the saved login. Log out and in again to switch organization or access.
 
 ## Hosted tools
 
-After logging in, `@mockzilla/mcp` forwards hosted tools to `mockzilla.org`'s MCP endpoint. At the time of writing, the hosted surface includes:
+`@mockzilla/mcp` lists the hosted tools from the start and forwards them to `mockzilla.org`'s MCP endpoint once you log in. At the time of writing, the hosted surface includes:
 
 - `get_context`
 - `list_sims`
@@ -245,7 +245,7 @@ On a machine without a browser, such as CI or a remote server, set `MOCKZILLA_TO
 | `MOCKZILLA_MCP_CLIENT_ID` | `https://mockzilla.org/mcp-client.json` | OAuth client id `login` uses. Override only for local development, e.g. with a client registered on a local server. |
 | `MOCKZILLA_BIN_VERSION` | matches bridge version | Pin a specific Mockzilla CLI version for `install_cli` to fetch. |
 | `MOCKZILLA_MANAGED_PORT` | `2200` | Preferred port for the `mock_endpoint` server. Falls back to a kernel-picked port if busy. Avoid 3000 (Next.js/React), 5173 (Vite), 8080. Try 2400 or 4444 if 2200 is unavailable. |
-| `MOCKZILLA_DOCS_DIR` | unset | Read docs from another build of `docs/`, made by `scripts/sync-docs.mjs`, instead of the packaged one. |
+| `MOCKZILLA_DOCS_DIR` | unset | Read docs from another build of `docs/`, made by `scripts/build.mjs`, instead of the packaged one. |
 
 ## Files
 
@@ -302,7 +302,7 @@ The bridge has two registries to keep in sync: npm (`@mockzilla/mcp`) and the MC
    ```
 
    This will:
-   - Build `docs/`: the product docs Mockzilla published, which needs read access to its docs bucket, plus the engine docs at the pinned CLI version.
+   - Build `docs/` and `hosted-tools.json` from the published docs bundle, plus the engine docs at the pinned CLI version. Maintainers only: it needs `DOCS_BUNDLE_CMD` in `local.mk`.
    - Run the smoke tests: the stdio round-trip, login against a fake OAuth server, the docs tools, and `mock_endpoint` against the real CLI (skipped when no CLI is installed).
    - `npm publish` the new tarball.
    - Mirror the version into `server.json`.

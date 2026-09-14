@@ -5,8 +5,8 @@
 
 help:
 	@echo "Targets:"
-	@echo "  build           Build docs/ from the published product docs and the pinned engine docs"
-	@echo "  build-local     Build docs/ from .docs-platform.json (django's make docs-mcp-dump)"
+	@echo "  build           Build docs/ and hosted-tools.json from the published bundle and the pinned engine docs"
+	@echo "  build-local     Build from a bundle already saved at .docs-platform.json"
 	@echo "  smoke           Run the stdio round-trip, login, docs and mock_endpoint smoke tests"
 	@echo "  start           Run the bridge against stdio (node bin/cli.js)"
 	@echo "  version         Print bridge version from package.json"
@@ -32,17 +32,17 @@ version:
 clean:
 	rm -rf $${HOME}/.cache/mockzilla-mcp
 
-# The product docs come from the bucket Django's publish_docs writes, so this needs prod read access.
-DOCS_BUCKET ?= mz-prod-docs-assets
-AWS ?= aws-vault exec mz-prod -- aws
+# Maintainers set DOCS_BUNDLE_CMD in local.mk, which git ignores: a command that prints the published bundle.
+-include local.mk
 
 build:
-	$(AWS) s3 cp s3://$(DOCS_BUCKET)/export/mcp.json .docs-platform.json
-	node scripts/sync-docs.mjs .docs-platform.json docs
+	@test -n "$(DOCS_BUNDLE_CMD)" || { echo "Set DOCS_BUNDLE_CMD in local.mk to fetch the published bundle." >&2; exit 1; }
+	$(DOCS_BUNDLE_CMD) > .docs-platform.json
+	node scripts/build.mjs .docs-platform.json docs
 	rm -f .docs-platform.json
 
 build-local:
-	node scripts/sync-docs.mjs .docs-platform.json docs
+	node scripts/build.mjs .docs-platform.json docs
 
 publish-dry:
 	npm pack --dry-run

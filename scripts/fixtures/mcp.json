@@ -28,5 +28,35 @@
       "url": "https://mockzilla.org/docs/simulations/simulation-types",
       "markdown": "# Simulation types\n\nEvery simulation starts from a spec.\n\n![The simulation type picker, with App selected.](https://static.example/types.png)\n\n*The type picker*\n\n## App simulations\n\nAn app simulation lives in your account. Back to [Terminology](https://mockzilla.org/docs/getting-started/terminology).\n"
     }
+  ],
+  "tools": [
+    {
+      "name": "get_context",
+      "description": "Return the org, role and access the current MCP credential is scoped to.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "list_sims",
+      "description": "List the sims accessible to the current org.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "search": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    }
   ]
 }

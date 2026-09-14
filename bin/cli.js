@@ -16,6 +16,7 @@
 import { createInterface } from "node:readline";
 
 import { isAuthenticated, onAuthChange } from "../lib/auth.js";
+import { hostedToolsSnapshot } from "../lib/hosted.js";
 import { killAllLocal } from "../lib/local.js";
 import { proxy } from "../lib/proxy.js";
 import { LOCAL_TOOLS } from "../lib/tools.js";
@@ -36,7 +37,7 @@ const SUPPORTED_PROTOCOL_VERSIONS = [
 // will retry on demand.
 latestPublishedVersion().catch(() => {});
 
-// Hosted tools come and go with the login, so the client re-reads the list.
+// A login swaps the packed hosted list for the live one, which hides write tools on a read-only login.
 onAuthChange(() => {
   process.stdout.write(
     JSON.stringify({ jsonrpc: "2.0", method: "notifications/tools/list_changed" }) + "\n",
@@ -115,17 +116,17 @@ async function handle(payload) {
       description: t.description,
       inputSchema: t.inputSchema,
     }));
+    const hosted = (tools) => tools.filter((t) => !(t.name in LOCAL_TOOLS));
+    // Hosted tools are listed before login too: not every client re-reads the list when a login lands.
     if (!(await isAuthenticated())) {
-      return reply(id, { tools: local });
+      return reply(id, { tools: [...local, ...hosted(await hostedToolsSnapshot())] });
     }
     try {
       const upstream = await proxy(payload);
-      const hostedTools = upstream?.result?.tools ?? [];
-      return reply(id, { tools: [...local, ...hostedTools] });
+      return reply(id, { tools: [...local, ...hosted(upstream?.result?.tools ?? [])] });
     } catch (err) {
-      // Keep the local tools usable while the hosted plane is unreachable.
       process.stderr.write(`mockzilla-mcp: hosted tools/list failed: ${err.message}\n`);
-      return reply(id, { tools: local });
+      return reply(id, { tools: [...local, ...hosted(await hostedToolsSnapshot())] });
     }
   }
 
@@ -154,7 +155,7 @@ async function handle(payload) {
             type: "text",
             text:
               `Tool "${name}" needs a Mockzilla login. Call the login tool, ` +
-              `then retry.`,
+              `and once the user approves in the browser, call "${name}" again.`,
           },
         ],
         isError: true,
