@@ -19,4 +19,5 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: node --check bin/cli.js
       - run: node scripts/smoke.mjs
+      - run: node scripts/sync-docs.mjs scripts/fixtures/mcp.json docs
       - run: node scripts/docs-smoke.mjs

@@ -302,7 +302,8 @@ The bridge has two registries to keep in sync: npm (`@mockzilla/mcp`) and the MC
    ```
 
    This will:
-   - Run the smoke tests: the stdio round-trip, login against a fake OAuth server, and `mock_endpoint` against the real CLI (skipped when no CLI is installed).
+   - Build `docs/`: the product docs Mockzilla published, which needs read access to its docs bucket, plus the engine docs at the pinned CLI version.
+   - Run the smoke tests: the stdio round-trip, login against a fake OAuth server, the docs tools, and `mock_endpoint` against the real CLI (skipped when no CLI is installed).
    - `npm publish` the new tarball.
    - Mirror the version into `server.json`.
    - Log `mcp-publisher` in with the GitHub token from Keychain (see below).

@@ -3,9 +3,15 @@
 // Run via `node scripts/docs-smoke.mjs`.
 
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 
 // Claude Code's default cap on one tool result is 25k tokens; 4 characters a token is a safe floor.
 const RESULT_LIMIT_CHARS = 25_000 * 4;
+
+if (!existsSync("docs/index.json")) {
+  console.error("docs-smoke: no docs/ to test. Run `make build` first.");
+  process.exit(1);
+}
 
 const bridge = startBridge();
 try {

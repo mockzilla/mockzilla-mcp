@@ -1,0 +1,32 @@
+{
+  "categories": [
+    {
+      "slug": "getting-started",
+      "name": "Getting started",
+      "description": "What Mockzilla is and the words it uses."
+    },
+    {
+      "slug": "simulations",
+      "name": "Simulations",
+      "description": "Create, deploy and share simulations."
+    }
+  ],
+  "topics": [
+    {
+      "id": "getting-started/terminology",
+      "category": "getting-started",
+      "title": "Terminology",
+      "summary": "The words Mockzilla uses, from simulation to replay.",
+      "url": "https://mockzilla.org/docs/getting-started/terminology",
+      "markdown": "# Terminology\n\nA simulation is a mock API that Mockzilla runs for you.\n\n## Simulation\n\nOne simulation serves one or more services. See [Simulation types](https://mockzilla.org/docs/simulations/simulation-types/) for the kinds there are.\n"
+    },
+    {
+      "id": "simulations/simulation-types",
+      "category": "simulations",
+      "title": "Simulation types",
+      "summary": "The kinds of simulation and when to pick each.",
+      "url": "https://mockzilla.org/docs/simulations/simulation-types",
+      "markdown": "# Simulation types\n\nEvery simulation starts from a spec.\n\n![The simulation type picker, with App selected.](https://static.example/types.png)\n\n*The type picker*\n\n## App simulations\n\nAn app simulation lives in your account. Back to [Terminology](https://mockzilla.org/docs/getting-started/terminology).\n"
+    }
+  ]
+}
