@@ -167,6 +167,9 @@ These tools are always available and never leave the user's machine.
 - **`info`**
   Summarise an OpenAPI spec without serving it: `{title, version, openapi_version, endpoint_count, paths}`. Also reads `.mockz` packages.
 
+- **`lint`**
+  Find schemas in a spec that no value can satisfy, so a broken spec is caught before serving it: `{clean, defect_count, defects}`.
+
 - **`mockzilla_docs_topics`**
   List available Mockzilla doc topics.
 
@@ -179,7 +182,7 @@ These tools are always available and never leave the user's machine.
 ### Local mocking
 
 - **`serve_locally`**
-  Start a portable mock server on a free port. Accepts a spec file, directory, or public `https` URL. Returns `{url, port, pid, services}`. For a single spec, `latency`, `mount` and `context` add delay, change the mount path, or set replacement values.
+  Start a portable mock server on a free port. Accepts a spec file, directory, or public `https` URL. Returns `{url, port, pid, services}`. For a single spec, `latency`, `errors`, `mount` and `context` add delay, inject error responses, change the mount path, or set replacement values.
 
 - **`stop_locally`**
   Stop a server started by `serve_locally`.
