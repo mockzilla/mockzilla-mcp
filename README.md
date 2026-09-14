@@ -30,9 +30,9 @@ From an agent you can:
 - Mock a single HTTP endpoint without a spec.
 - List, stop, and clear locally managed mocks.
 
-### Hosted plane (requires `MOCKZILLA_TOKEN`)
+### Hosted plane (log in once)
 
-When `MOCKZILLA_TOKEN` is set, the bridge forwards extra tools to `mockzilla.org`'s MCP endpoint.
+Ask your agent to log in, or just ask for something hosted. The agent calls the `login` tool, your browser opens the Mockzilla login, and you pick an organization and read-only or read-and-write access. The bridge keeps the login on your machine and renews it by itself. Hosted tools appear as soon as you approve.
 
 Agents can then:
 
@@ -41,13 +41,13 @@ Agents can then:
 - Deploy hosted mocks from a spec, URL, or catalog bundle.
 - Wait for a deploy and return the live URL.
 
-Without a token, only the local plane is exposed. Agents can still help users explore Mockzilla and run local mocks before they sign up.
+Before logging in, only the local plane is exposed. Agents can still help users explore Mockzilla and run local mocks before they sign up.
 
 ## Example prompts
 
 You can use these directly from Claude Code, Claude Desktop, Cursor, or Gemini CLI once `mockzilla` is configured as an MCP server.
 
-### Local plane (no token)
+### Local plane (no account)
 
 - "Is the mockzilla CLI installed on this machine?"
 - "Install Mockzilla for me."
@@ -57,8 +57,9 @@ You can use these directly from Claude Code, Claude Desktop, Cursor, or Gemini C
 - "List the mock endpoints you're managing."
 - "Stop the mock server you started."
 
-### Hosted plane (with `MOCKZILLA_TOKEN`)
+### Hosted plane (after logging in)
 
+- "Log me in to Mockzilla."
 - "List the sims I have deployed."
 - "Show me the catalog products."
 - "Deploy a Stripe sandbox named `stripe-test` and give me the live URL."
@@ -198,9 +199,13 @@ These tools are always available and never leave the user's machine.
 
 ## Hosted tools
 
-When `MOCKZILLA_TOKEN` is set, `@mockzilla/mcp` forwards hosted tools to `mockzilla.org`'s MCP endpoint.
+- **`login`**
+  Opens the Mockzilla login in the browser and saves the login under `~/.config/mockzilla-mcp/`, one per server URL. Returns right away with the login link.
 
-At the time of writing, the hosted surface includes:
+- **`logout`**
+  Revokes the connection and deletes the saved login.
+
+After logging in, `@mockzilla/mcp` forwards hosted tools to `mockzilla.org`'s MCP endpoint. At the time of writing, the hosted surface includes:
 
 - `get_context`
 - `list_sims`
@@ -212,12 +217,15 @@ At the time of writing, the hosted surface includes:
 
 Refer to the hosted server's docs or the MCP registry entry for the live tool list.
 
+On a machine without a browser, such as CI or a remote server, set `MOCKZILLA_TOKEN` to an API key from the dashboard instead of logging in. Clients that can't run `npx`, like claude.ai and ChatGPT, can connect straight to `https://platform.mockzilla.org/mcp` and log in there.
+
 ## Configuration
 
 | Env var | Default | Purpose |
 |---------|---------|---------|
-| `MOCKZILLA_TOKEN` | unset | Bearer token (`mz_oauth_*` or `mz_*`). Hosted tools are hidden when unset. |
-| `MOCKZILLA_MCP_URL` | `https://platform.mockzilla.org/mcp/` | Override the hosted endpoint (staging, self-hosted). |
+| `MOCKZILLA_TOKEN` | unset | API key (`mz_*`) to use instead of logging in, for machines without a browser. |
+| `MOCKZILLA_MCP_URL` | `https://platform.mockzilla.org/mcp` | Override the hosted endpoint, e.g. `http://localhost:8000/mcp` for local development. |
+| `MOCKZILLA_NO_BROWSER` | unset | Set to `1` to not open a browser on `login`; the agent shows the link instead. |
 | `MOCKZILLA_BIN_VERSION` | matches bridge version | Pin a specific Mockzilla CLI version for `install_cli` to fetch. |
 | `MOCKZILLA_MANAGED_PORT` | `2200` | Preferred port for the `mock_endpoint` server. Falls back to a kernel-picked port if busy. Avoid 3000 (Next.js/React), 5173 (Vite), 8080. Try 2400 or 4444 if 2200 is unavailable. |
 | `MOCKZILLA_DOCS_DIR` | unset | Read docs from this local directory instead of GitHub (useful when editing docs). |

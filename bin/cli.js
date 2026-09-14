@@ -8,14 +8,16 @@
 //   CLI itself if missing. Always available. See lib/tools.js.
 //
 // • Hosted tools (account-scoped): proxied to the hosted MCP endpoint
-//   (`/mcp/`) when MOCKZILLA_TOKEN is set. Without a token, the local
-//   plane is the entire surface and the agent can still help the user
-//   explore mockzilla before they sign up. See lib/proxy.js.
+//   once the user logs in with the `login` tool, or when MOCKZILLA_TOKEN
+//   is set. Before that the local plane is the entire surface and the
+//   agent can still help the user explore mockzilla before they sign up.
+//   See lib/auth.js and lib/proxy.js.
 
 import { createInterface } from "node:readline";
 
+import { isAuthenticated, onAuthChange } from "../lib/auth.js";
 import { killAllLocal } from "../lib/local.js";
-import { hasToken, proxy } from "../lib/proxy.js";
+import { proxy } from "../lib/proxy.js";
 import { LOCAL_TOOLS } from "../lib/tools.js";
 import { bridgeVersion, latestPublishedVersion } from "../lib/version.js";
 
@@ -33,6 +35,13 @@ const SUPPORTED_PROTOCOL_VERSIONS = [
 // instant when the agent calls it. Failure here is silent — the tool
 // will retry on demand.
 latestPublishedVersion().catch(() => {});
+
+// Hosted tools come and go with the login, so the client re-reads the list.
+onAuthChange(() => {
+  process.stdout.write(
+    JSON.stringify({ jsonrpc: "2.0", method: "notifications/tools/list_changed" }) + "\n",
+  );
+});
 
 const rl = createInterface({ input: process.stdin, crlfDelay: Infinity });
 
@@ -85,7 +94,7 @@ async function handle(payload) {
       : SUPPORTED_PROTOCOL_VERSIONS[0];
     return reply(id, {
       protocolVersion,
-      capabilities: { tools: { listChanged: false } },
+      capabilities: { tools: { listChanged: true } },
       serverInfo: { name: "mockzilla-bridge", version },
     });
   }
@@ -106,12 +115,18 @@ async function handle(payload) {
       description: t.description,
       inputSchema: t.inputSchema,
     }));
-    if (!hasToken) {
+    if (!(await isAuthenticated())) {
       return reply(id, { tools: local });
     }
-    const upstream = await proxy(payload);
-    const hostedTools = upstream?.result?.tools ?? [];
-    return reply(id, { tools: [...local, ...hostedTools] });
+    try {
+      const upstream = await proxy(payload);
+      const hostedTools = upstream?.result?.tools ?? [];
+      return reply(id, { tools: [...local, ...hostedTools] });
+    } catch (err) {
+      // Keep the local tools usable while the hosted plane is unreachable.
+      process.stderr.write(`mockzilla-mcp: hosted tools/list failed: ${err.message}\n`);
+      return reply(id, { tools: local });
+    }
   }
 
   if (method === "tools/call") {
@@ -132,14 +147,14 @@ async function handle(payload) {
       }
     }
 
-    if (!hasToken) {
+    if (!(await isAuthenticated())) {
       return reply(id, {
         content: [
           {
             type: "text",
             text:
-              `Tool "${name}" needs a mockzilla account. Set ` +
-              `MOCKZILLA_TOKEN in your MCP client config to use it.`,
+              `Tool "${name}" needs a Mockzilla login. Call the login tool, ` +
+              `then retry.`,
           },
         ],
         isError: true,
@@ -148,7 +163,7 @@ async function handle(payload) {
     return await proxy(payload);
   }
 
-  if (!hasToken) {
+  if (!(await isAuthenticated())) {
     return errorResponse(id, -32601, `Unknown method: ${method}`);
   }
   return await proxy(payload);

@@ -5,7 +5,7 @@
 
 help:
 	@echo "Targets:"
-	@echo "  smoke           Run scripts/smoke.mjs (stdio MCP round-trip)"
+	@echo "  smoke           Run the stdio round-trip and login smoke tests"
 	@echo "  start           Run the bridge against stdio (node bin/cli.js)"
 	@echo "  version         Print bridge version from package.json"
 	@echo "  clean           Remove install_cli cache (~/.cache/mockzilla-mcp)"
@@ -17,6 +17,7 @@ help:
 
 smoke:
 	node scripts/smoke.mjs
+	node scripts/login-smoke.mjs
 
 start:
 	node bin/cli.js

@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.mockzilla/mockzilla-mcp",
   "description": "Mockzilla MCP server. Mock any OpenAPI spec locally with Claude, Cursor, or Gemini CLI.",
-  "version": "0.2.16",
+  "version": "0.2.17",
   "websiteUrl": "https://mockzilla.org",
   "repository": {
     "url": "https://github.com/mockzilla/mockzilla-mcp",
@@ -13,20 +13,20 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@mockzilla/mcp",
-      "version": "0.2.16",
+      "version": "0.2.17",
       "transport": {
         "type": "stdio"
       },
       "environmentVariables": [
         {
           "name": "MOCKZILLA_TOKEN",
-          "description": "Bearer token (mz_oauth_* or mz_*) that unlocks the hosted plane on mockzilla.org. Leave unset to use only the local plane.",
+          "description": "API key (mz_*) to use instead of logging in with the login tool, for machines without a browser. Leave unset to log in from your agent.",
           "isRequired": false,
           "isSecret": true
         },
         {
           "name": "MOCKZILLA_MCP_URL",
-          "description": "Override the hosted MCP endpoint (staging or self-hosted). Defaults to https://platform.mockzilla.org/mcp/.",
+          "description": "Override the hosted MCP endpoint (staging or local development). Defaults to https://platform.mockzilla.org/mcp.",
           "isRequired": false
         },
         {
