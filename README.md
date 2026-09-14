@@ -333,9 +333,9 @@ One-time setup:
 
 ### From GitHub Actions
 
-Both publish workflows are disabled for now, so release with `make publish-all`.
+npm publish from GitHub is disabled for now, so release with `make publish-all`.
 
-When enabled, publishing a GitHub release named `v<package.json version>` runs `.github/workflows/publish-mcp.yml`. It skips versions the MCP registry already has, waits up to 10 minutes for the version to appear on npm, then publishes `server.json` using GitHub OIDC, so no token is needed. It can also be started by hand from the Actions tab.
+`.github/workflows/publish-mcp.yml` runs only when started by hand from the Actions tab. It skips versions the MCP registry already has, waits up to 10 minutes for the version to appear on npm, then publishes `server.json` using GitHub OIDC, so no token is needed.
 
 ## Related
 

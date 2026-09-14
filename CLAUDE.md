@@ -181,8 +181,9 @@ The script turns a link to another topic into that topic's id and an image into
 its alt text, so nothing in a topic tempts the agent to fetch a URL.
 
 A docs change reaches agents with the next release: publish the docs, then
-`make publish-all`, which builds first. Both GitHub publish workflows are
-disabled for now: npm has no access to the bucket, so release from the Makefile. To preview unpublished docs, run
+`make publish-all`, which builds first. GitHub's npm publish is disabled for
+now, since it has no access to the bucket, and the MCP registry workflow only
+runs when started by hand. To preview unpublished docs, run
 `make docs-mcp-dump` in the django repo, then `make build-local` here.
 
 ## Versioning
