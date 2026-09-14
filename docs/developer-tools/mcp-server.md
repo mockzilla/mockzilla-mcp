@@ -52,25 +52,41 @@ Every one of these runs on your own machine:
 
 Once you log in, the agent also reaches your organization: it can list what you have deployed, browse the catalog, and deploy a hosted simulation that keeps answering after the agent stops.
 
-Ask your agent to log in to Mockzilla, or ask it for something hosted. It calls the `login` tool and your browser opens the Mockzilla sign-in:
+Ask your agent to log in to Mockzilla, or ask it for something hosted. It calls the `login` tool and your browser opens the Mockzilla sign-in.
 
-1. Sign in, if you are not already.
-2. Pick the organization the agent should work in.
-3. Choose **Read only** or **Read and write**. Read and write lets the agent deploy. Viewers can only choose Read only.
-4. Click **Allow**.
+Sign in, if you are not already.
+
+(Image: The Mockzilla sign-in page, with the sign-in providers and the email form.)
+
+*The Mockzilla sign-in*
+
+Pick the organization the agent should work in.
+
+(Image: The consent page for Mockzilla MCP, with the organization picker set to Acme Inc.)
+
+*The organization picker*
+
+Choose **Read only** or **Read and write**. Read and write lets the agent deploy. Viewers can only choose Read only.
+
+(Image: The access choice, with Read and write selected over Read only.)
+
+*The access choice*
+
+Click **Allow**.
+
+(Image: The whole consent page, with the Deny and Allow buttons at the bottom.)
+
+*The page, ready to allow*
 
 The hosted tools appear in your agent as soon as you allow it. If they do not show up, start a new session. The login stays on your machine and renews itself, so you only do this once.
 
-More tools appear after you log in. A Read only login gets four of them:
+More tools appear after you log in:
 
 - **`get_context`** reports which organization and access the agent has.
 - **`list_sims`** pages through the simulations you can see, with their URLs and statuses.
 - **`list_catalog_products`** browses the catalog.
 - **`wait_for_deploy`** waits for a deploy to go active and returns its live URL.
-
-Read and write adds the three that deploy:
-
-- **`deploy_mock_from_catalog`**, **`deploy_mock_from_spec`** and **`deploy_mock_from_url`** create a hosted simulation from a catalog entry, a pasted spec or a spec URL.
+- **`deploy_mock_from_catalog`**, **`deploy_mock_from_spec`** and **`deploy_mock_from_url`** create a hosted simulation from a catalog entry, a pasted spec or a spec URL. Only a Read and write login gets these.
 
 A deploy through an agent is a deploy like any other: it counts against your plan and shows up in the app.
 
@@ -81,6 +97,10 @@ To switch organization or access, ask the agent to log out, which calls `logout`
 A machine without a browser, such as a CI runner or a remote server, cannot open the sign-in page. Give the agent an API key there.
 
 Create the key first. Open **Settings**, then the **API Keys** tab, and click **Create key**. Give it the **Editor** role if the agent should deploy, **Viewer** if it should only read. The key is shown once.
+
+(Image: The create key dialog, with a name for the agent's key and the Editor role picked.)
+
+*A key for the agent*
 
 > API keys are part of plans that include them.
 
@@ -108,10 +128,9 @@ With a key set, the hosted tools are there from the start and the agent never as
 
 ## Settings
 
-Five environment variables, all of them optional:
+These environment variables are all optional:
 
 - **`MOCKZILLA_TOKEN`** is an API key to use instead of logging in.
-- **`MOCKZILLA_MCP_URL`** sends hosted tool calls somewhere other than `https://platform.mockzilla.org/mcp`.
 - **`MOCKZILLA_NO_BROWSER`** set to `1` stops `login` from opening a browser. The agent gives you the sign-in link instead.
 - **`MOCKZILLA_BIN_VERSION`** pins which CLI version `install_cli` fetches. It follows the bridge by default.
 - **`MOCKZILLA_MANAGED_PORT`** is the preferred port for the `mock_endpoint` server, `2200` by default. A busy port falls back to a free one.
