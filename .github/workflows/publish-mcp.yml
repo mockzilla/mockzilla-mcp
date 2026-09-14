@@ -1,0 +1,63 @@
+name: publish-mcp
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish-mcp:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # OIDC login to the MCP registry, which grants io.github.mockzilla/*
+    env:
+      MCP_PUBLISHER_VERSION: v1.8.1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Read package.json version
+        id: pkg
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Verify release tag matches package.json version
+        if: github.event_name == 'release'
+        env:
+          VERSION: ${{ steps.pkg.outputs.version }}
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$tag" != "$VERSION" ]; then
+            echo "release tag $GITHUB_REF_NAME (=$tag) != package.json version $VERSION" >&2
+            exit 1
+          fi
+
+      - name: Sync server.json version
+        run: make sync-server-json
+
+      # The registry rejects a version npm doesn't have. npm is published by the
+      # publish workflow or by hand, so wait for it instead of racing it.
+      - name: Wait for the version on npm
+        env:
+          VERSION: ${{ steps.pkg.outputs.version }}
+        run: |
+          for _ in $(seq 1 40); do
+            if [ "$(npm view "@mockzilla/mcp@$VERSION" version 2>/dev/null)" = "$VERSION" ]; then
+              exit 0
+            fi
+            echo "@mockzilla/mcp@$VERSION is not on npm yet, checking again in 15s"
+            sleep 15
+          done
+          echo "@mockzilla/mcp@$VERSION did not appear on npm within 10 minutes" >&2
+          exit 1
+
+      - name: Install mcp-publisher
+        run: |
+          curl -sfL "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher --version
+
+      - run: ./mcp-publisher login github-oidc
+
+      - run: ./mcp-publisher publish
