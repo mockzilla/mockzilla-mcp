@@ -278,6 +278,7 @@ The bridge has two registries to keep in sync: npm (`@mockzilla/mcp`) and the MC
    - Run the smoke test.
    - `npm publish` the new tarball.
    - Mirror the version into `server.json`.
+   - Log `mcp-publisher` in with the GitHub token from Keychain (see below).
    - Run `mcp-publisher publish` against the MCP registry.
 
 3. Commit the `server.json` bump.
@@ -288,6 +289,23 @@ If you only want one side:
 - `make publish-mcp` for the MCP registry only (`server.json` is always re-synced from `package.json` first).
 
 `mcp-publisher` must be on `PATH` (`brew install mcp-publisher` or follow the [installation docs](https://github.com/modelcontextprotocol/registry)).
+
+### MCP registry login
+
+A registry login lasts 5 minutes, so `make publish-mcp` logs in before every publish. It reads a GitHub token from macOS Keychain, because the browser login (`mcp-publisher login github` without a token) can't publish under `io.github.mockzilla`.
+
+One-time setup:
+
+1. [Create a classic GitHub token](https://github.com/settings/tokens/new?scopes=read:org,read:user&description=mcp-publisher) with `read:org` and `read:user`.
+2. Store it in Keychain. The command prompts for the token:
+
+   ```bash
+   security add-generic-password -a "$USER" -s mcp-publisher-github -w
+   ```
+
+### From GitHub Actions
+
+Publishing a GitHub release named `v<package.json version>` runs `.github/workflows/publish-mcp.yml`. It waits up to 10 minutes for that version to appear on npm, then publishes `server.json` to the MCP registry using GitHub OIDC, so no token is needed. It can also be started by hand from the Actions tab.
 
 ## Related
 

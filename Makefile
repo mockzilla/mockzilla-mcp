@@ -13,7 +13,7 @@ help:
 	@echo "  publish         Smoke-test then npm publish (uses package.json version)"
 	@echo "  publish-mcp     Sync server.json then mcp-publisher publish"
 	@echo "  publish-all     publish + publish-mcp (do this every release)"
-	@echo "  login-mcp       Authenticate mcp-publisher via GitHub OAuth"
+	@echo "  login-mcp       Log mcp-publisher in with the GitHub token from Keychain"
 
 smoke:
 	node scripts/smoke.mjs
@@ -39,11 +39,20 @@ sync-server-json:
 publish: smoke
 	npm publish
 
-publish-mcp: sync-server-json
+publish-mcp: sync-server-json login-mcp
 	mcp-publisher publish
 
-# Re-run when mcp-publisher errors with "not authenticated" / expired token.
+# The browser login can't publish to io.github.mockzilla, and a registry login
+# lasts 5 minutes, so publish-mcp logs in with a Keychain token every time.
+MCP_TOKEN_KEYCHAIN_SERVICE := mcp-publisher-github
+
 login-mcp:
-	mcp-publisher login github
+	@token="$$(security find-generic-password -s $(MCP_TOKEN_KEYCHAIN_SERVICE) -w 2>/dev/null)" || { \
+		echo "No GitHub token in Keychain. Create a classic token with read:org and read:user:" >&2; \
+		echo "  https://github.com/settings/tokens/new?scopes=read:org,read:user&description=mcp-publisher" >&2; \
+		echo "then store it (the command prompts for it):" >&2; \
+		echo '  security add-generic-password -a "$$USER" -s $(MCP_TOKEN_KEYCHAIN_SERVICE) -w' >&2; \
+		exit 1; }; \
+	MCP_GITHUB_TOKEN="$$token" mcp-publisher login github
 
 publish-all: publish publish-mcp
