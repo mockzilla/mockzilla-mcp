@@ -7,6 +7,7 @@ on:
 
 jobs:
   publish-mcp:
+    if: false  # TEMP: MCP registry publish disabled; publish with make publish-mcp
     runs-on: ubuntu-latest
     permissions:
       contents: read
