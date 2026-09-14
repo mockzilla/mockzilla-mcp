@@ -1,0 +1,492 @@
+# Contexts
+
+Contexts provide a way to control the values generated for API responses and requests. 
+They allow you to define static values, dynamic fake data, and reusable patterns that are applied during content generation.
+
+## Overview
+
+Contexts are organized in YAML files which act as namespaces or collections of context data.
+File names typically correspond to the service or domain name (e.g., `payments.yml`, `petstore.yml`).
+
+On the filesystem, contexts are stored with the `.yml` extension in the `contexts` directory.
+For example: `contexts/payments.yml`.
+
+**Important:** Only individual primitive properties are replaced during content generation.
+You cannot substitute a property with an object or a list.
+
+## How Context Replacement Works
+
+The context system operates in three phases:
+
+1. **Parse phase**: YAML files are parsed and aliases are extracted
+2. **Alias resolution phase**: All aliases are resolved across namespaces
+3. **Function processing phase**: Function prefixes (`fake:`, `func:`, `botify:`, `join:`, `request:`) are processed
+
+When generating content, the system looks up property names as-is (no case conversion) in the loaded contexts and replaces values accordingly.
+
+### Default Contexts
+
+Each distribution ships with default contexts that are automatically loaded:
+
+| Context | Description |
+|---------|-------------|
+| `common` | Common patterns like `_id$`, `_email$` for suffix matching |
+| `fake` | Fake data generators from the faker library |
+| `words` | Common nouns, adjectives, and verbs for realistic data |
+
+## Context Structure
+
+Inside a context file, provide data that corresponds to your schema properties.
+
+**Example OpenAPI schema:**
+```yaml
+Pet:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+    tag:
+      type: string
+```
+
+**Context file (`petstore.yml`):**
+```yaml
+id: 123e4567-e89b-12d3-a456-426614174000
+name: "doggie"
+tag: "dog"
+```
+
+**Generated JSON response:**
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "name": "doggie",
+  "tag": "dog"
+}
+```
+
+### Matching Behavior
+
+**Root-level primitives** (strings, numbers, booleans, arrays, functions) match the field name at any depth in the generated response:
+
+```yaml
+status: ["active", "inactive"]  # Matches any field named "status" regardless of nesting
+email: "fake:internet.email"    # Matches any field named "email" at any level
+```
+
+**Nested objects** use suffix matching - they only match when the response path ends with the context path:
+
+```yaml
+data:
+  foo: "replace-data.foo"
+```
+
+This matches `user.address.data.foo` because the path ends with `data.foo`, but does NOT match `user.foo` (no `data` parent).
+
+**Priority:** More specific (longer) suffix matches win over root-level matches:
+
+```yaml
+status: ["global-a", "global-b"]       # Least specific: matches "status" anywhere
+order:
+  status: ["pending", "shipped"]        # More specific: wins when path ends with "order.status"
+```
+
+For a field at path `order.status`, the nested `order.status` context wins over the root-level `status`.
+
+### Nested Properties
+
+For schemas with nested objects, use nested YAML structure with keys matching your schema property names exactly:
+
+```yaml
+Pet:
+  id: 123e4567-e89b-12d3-a456-426614174000
+  name: "doggie"
+  tag: "dog"
+ownerPerson:
+  id: 1
+  name: "Jane Doe"
+```
+
+**Note:** Context keys must match your schema property names exactly - there is no automatic case conversion. If your OpenAPI schema uses `camelCase`, your context keys should also be `camelCase`.
+
+### Arrays
+
+Arrays are transparent in context matching. The context describes the schema structure, not the runtime shape. Array items share the same schema, so the replacement applies to every generated element:
+
+```yaml
+user:
+  addresses:
+    city: "fake:address.city"
+    street: "fake:address.street_address"
+```
+
+If `addresses` is an array of objects, each generated item gets its `city` and `street` replaced. The context path `user.addresses.city` matches regardless of how many items are produced.
+
+## Context Functions
+
+Context functions allow dynamic value generation. All functions use a prefix syntax: `prefix:arguments`.
+
+### `fake:` - Fake Data Generation
+
+Generates random values using the [jaswdr/faker](https://github.com/jaswdr/faker) library.
+
+**Syntax:** `fake:path.to.function`
+
+```yaml
+Pet:
+  id: "fake:uuid.v4"
+  name: "fake:pet.name"
+  tag: "fake:gamer.tag"
+ownerPerson:
+  id: "fake:u_int8"
+  name: "fake:person.name"
+  email: "fake:internet.email"
+```
+
+All available fake functions are listed in the [fake.yml](https://github.com/mockzilla/mockzilla/blob/main/resources/contexts/fake.yml) file.
+
+**Common fake functions:**
+- `fake:uuid.v4` - UUID v4
+- `fake:person.name` - Full person name
+- `fake:person.first_name` - First name
+- `fake:internet.email` - Email address
+- `fake:internet.url` - URL
+- `fake:u_int8`, `fake:u_int16`, `fake:u_int32` - Unsigned integers
+- `fake:phone.number` - Phone number
+
+### `alias:` - Cross-Context References
+
+References values from other contexts or namespaces.
+
+**Syntax:** `alias:namespace.dotted.path`
+
+```yaml title="petstore.yml"
+id: "fake:uuid.v4"
+name: "fake:pet.name"
+ownerId: "alias:person.id"
+ownerName: "alias:person.name"
+```
+
+```yaml title="person.yml"
+id: "fake:u_int8"
+name: "fake:person.name"
+petId: "alias:petstore.id"
+```
+
+If an alias doesn't resolve to a valid target, it remains as-is in the output, making issues easy to spot.
+
+### `func:` - Custom Functions
+
+Calls registered functions with optional arguments.
+
+**Syntax variants:**
+- `func:name` - No arguments
+- `func:name:arg` - One argument
+- `func:name:arg1,arg2` - Two arguments
+
+**Available functions:**
+
+| Function      | Arguments | Description |
+|---------------|-----------|-------------|
+| `botify`      | pattern | Generate string from pattern (see below) |
+| `echo`        | value | Return the value as-is |
+| `int_between` | min,max | Random int between min and max |
+
+**Example:**
+```yaml
+totalItems: "func:int_between:1,100"
+code: "func:echo:FIXED_CODE"
+```
+
+### `botify:` - Pattern-Based Generation
+
+Generates random strings based on a pattern. This is a shorthand for `func:botify:pattern`.
+
+**Pattern characters:**
+- `?` - Random letter (a-z)
+- `#` - Random digit (0-9)
+
+**Syntax:** `botify:pattern`
+
+```yaml
+password: "botify:???###"      # e.g., "abc123"
+code: "botify:??-####"         # e.g., "xy-5678"
+serial: "botify:???-???-###"   # e.g., "abc-def-123"
+```
+
+### `join:` - Value Concatenation
+
+Joins values from multiple context keys with a separator.
+
+**Syntax:** `join:separator,namespace.key1,namespace.key2,...`
+
+```yaml
+expression: "join:-,words.adjectives,words.nouns"  # e.g., "active-account"
+full_name: "join: ,person.first_name,person.last_name"
+```
+
+### `request:` - Values From the Incoming Request
+
+Takes the value from the body of the request being answered, instead of generating one.
+
+**Syntax:** `request:dotted.path`
+
+```yaml title="payments.yml"
+charge:
+  currency: "request:order.payment.amount.currency"
+  amount: "request:order.payment.amount.value"
+```
+
+A request like:
+
+```json
+{"order": {"payment": {"amount": {"currency": "EUR", "value": 10.5}}}}
+```
+
+produces a response echoing those values:
+
+```json
+{"charge": {"currency": "EUR", "amount": 10.5}}
+```
+
+**Array elements** are addressed by index:
+
+```yaml
+firstCurrency: "request:order.amounts[0].currency"
+secondCurrency: "request:order.amounts[1].currency"
+```
+
+Leaving the index out searches the array and takes the first element where the rest of the
+path resolves, so `request:order.amounts.currency` matches `order.amounts[0].currency` above.
+Top-level arrays are addressed with a leading index: `request:[0].currency`.
+
+**Notes:**
+
+- Only response generation reads the request. During request generation there is nothing to read from.
+- Paths that don't resolve (missing field, index out of range, no request body) fall back to the
+  next matching context, then to normal schema generation. Nothing fails.
+- The value must fit the schema of the property it replaces. A string taken from the request
+  cannot fill an `integer` field; such a value is ignored and the field is generated as usual.
+- Works in area-scoped sections too, e.g. under `in-response` or `in-header`.
+
+**Supported payloads** are picked by the request's `Content-Type` header:
+
+| Content-Type | Read as |
+|---|---|
+| `application/json` (and any `+json`) | JSON |
+| `application/x-www-form-urlencoded` | form fields |
+
+Form bodies are decoded with the same encoding rules mockzilla uses to generate them, so
+paths address nesting and arrays the same way as in JSON:
+
+```
+order[payment][currency]=EUR   →  request:order.payment.currency
+amounts[0][currency]=USD       →  request:amounts[0].currency
+currency=USD&currency=GBP      →  request:currency[1]
+```
+
+Numeric and boolean form values are converted to their JSON types, so they can fill
+`integer`, `number` and `boolean` properties. Other content types (uploads, XML, plain text)
+are not read; refs against them fall back to generated values.
+
+## Pattern Matching with Dynamic Keys
+
+Context keys can use regex patterns to match multiple property names.
+
+### Suffix Matching
+
+Keys ending with `$` match properties that end with that pattern:
+
+```yaml
+(_id|Id)$: "alias:fake.u_int8"           # Matches: user_id, userId, pet_id, petId
+(_email|Email)$: "alias:fake.internet.email" # Matches: user_email, userEmail
+(_count|Count)$: "alias:fake.u_int8"         # Matches: item_count, itemCount
+```
+
+Since there is no automatic case conversion, use alternation patterns like `(_id|Id)$` to match both `snake_case` and `camelCase` field names.
+
+### Prefix Matching
+
+Keys starting with `^` match properties that start with that pattern:
+
+```yaml
+(^total_|^total[A-Z]): "func:int_between:1,100"   # Matches: total_items, totalItems
+```
+
+### Wildcard Matching
+
+Use `*` to match any property name (converted to `.*` regex):
+
+```yaml
+"*": "alias:words.expression"  # Fallback for any unmatched property
+```
+
+## Predefined Value Lists
+
+Use a list of values to randomly select from predefined options:
+
+```yaml
+name: ["Jane", "John", "Alice", "Bob"]
+
+# Or multi-line format:
+status:
+  - "pending"
+  - "active"
+  - "completed"
+  - "cancelled"
+```
+
+A random value is picked from the list each time.
+
+## Area-Specific Contexts
+
+Different contexts can be applied to specific areas (path parameters, headers, etc.):
+
+```yaml
+in-path:
+  petId: "alias:fake.u_int8"
+  (id|Id)$: "alias:fake.u_int8"
+
+in-header:
+  x-pet-name: "alias:fake.pet.name"
+  x-request-id: "alias:fake.uuid.v4"
+```
+
+Area-specific contexts take precedence over default context replacements.
+
+### Request/Response Areas
+
+Compound area keys allow targeting request or response generation independently. This is useful when the same field needs different values depending on direction:
+
+```yaml
+id: 42                        # default for everything
+in-request:
+  id: "abc-123"               # request body/query only
+in-response:
+  id: 100                     # response body only
+in-request-header:
+  authorization: "Bearer tok" # request headers only
+in-response-header:
+  x-request-id: "fixed"      # response headers only
+```
+
+**Priority chain (most specific wins):**
+
+```
+in-request-header > in-request > in-header > root
+in-response-header > in-response > in-header > root
+```
+
+Direction wins over `in-header`: a header falls back to `in-request` / `in-response`
+before the direction-agnostic `in-header`.
+
+Available compound areas:
+
+| Area | Applies to |
+|------|-----------|
+| `in-request` | Request body, query parameters, and request headers not covered by `in-request-header` |
+| `in-response` | Response body, and response headers not covered by `in-response-header` |
+| `in-request-header` | Request headers only |
+| `in-response-header` | Response headers only |
+
+### Prefix Configuration
+
+The `in-` prefix can be changed in `config.yml`:
+```yaml
+app:
+  contextAreaPrefix: "in-"
+```
+
+## Service Configuration
+
+Each service has at most one `context.yml` file alongside its spec.
+The file is a flat YAML mapping of replacement keys to values:
+
+```yaml title="services/petstore/context.yml"
+name: ["Fluffy", "Spot", "Rover"]
+tag: ["cat", "dog", "bird"]
+status: ["available", "pending", "sold"]
+```
+
+The built-in `common`, `fake`, and `words` contexts are loaded
+automatically and don't need to be wired in. If a service has no
+`context.yml`, only the built-in defaults apply.
+
+## Resolution Order
+
+When generating values, contexts are checked in the following order. The first match wins:
+
+1. **User context** - provided via the UI editor or `X-Mockzilla-Context` HTTP header (base64-encoded JSON)
+2. **Service context** - from the service's `context.yml` file
+3. **Common context** - built-in patterns like `(_id|Id)$`, `email`, etc.
+4. **Fake context** - faker library generators
+5. **Words context** - common nouns, adjectives, verbs for fallback data
+
+User context overrides service context, which overrides defaults. This applies to both request and response generation.
+
+## Per-Request Context via Header
+
+Context replacements can be passed with any HTTP request using the `X-Mockzilla-Context` header. The value should be base64-encoded JSON:
+
+```
+X-Mockzilla-Context: eyJuYW1lIjoiZm9vIiwiaWQiOjExfQ==
+```
+
+This is useful for:
+- The UI context editor (sent automatically)
+- CI pipelines testing specific values
+- Programmatic response generation with custom data
+
+All context functions (`func:`, `fake:`, `alias:`, `botify:`, `join:`, `request:`) are supported in the header value - they are processed the same way as context YAML files.
+
+## Performance
+
+Context replacement is fast for typical workloads but cost grows with the product of
+**schema leaves** and **context entries**, because each leaf scans the context map looking
+for a matching key or pattern.
+
+**Rule of thumb (per request):**
+
+```
+latency ≈ baseline + ~100 ns × schema_leaves × context_entries
+```
+
+- `baseline` is the cost of walking the schema and generating values with no context
+  (~450 ns per leaf on a modern laptop CPU).
+- `~100 ns` is the marginal cost of one context-key check, per leaf. Deeply nested
+  schemas (depth ≥ 3) increase this somewhat because intermediate path elements are
+  also scanned against the context.
+- Allocations do **not** grow with context size; overhead is pure CPU.
+
+**Worked example:** an endpoint with a response schema of ~100 fields and a service
+context file of ~500 entries:
+
+```
+baseline   ≈ 450 ns × 100        =   45 µs
+scan cost  ≈ 100 ns × 100 × 500  = 5 000 µs
+total      ≈ 5 ms per response
+```
+
+Halving either side (50 fields **or** 250 entries) cuts the overhead roughly in half.
+
+**When to care:**
+
+| Endpoint × context | Typical latency | Notes |
+|---|---|---|
+| ≤10 fields **or** ≤10 entries | <100 µs | Negligible, ignore |
+| 100 fields × 50 entries | ~0.5 ms | Comfortable |
+| 100 fields × 500 entries | ~5 ms | Perceptible in tight loops |
+| 500 fields × 500 entries | ~35 ms | Will show up in p99 |
+
+The constants above were measured on an Apple M3 Pro; expect similar order of magnitude
+on other modern hardware. To re-measure on your machine, run
+`go test -bench=BenchmarkResponseContextOverhead -benchmem ./pkg/generator/`.
+
+## Using in Fixed Responses
+
+> **⚠️ Work in Progress:** Context replacement in fixed/static responses using `{placeholder}` syntax is currently not implemented. Static responses defined via `x-static-response` are returned as-is without placeholder substitution.
+
+For now, if you need dynamic values in responses, use schema-based generation with contexts rather than static response files.

@@ -1,11 +1,13 @@
 # mockzilla-mcp — pure-JS, no build step. Targets are thin wrappers
 # around node/npm so common dev actions have one canonical command.
 
-.PHONY: help smoke start clean publish-dry publish publish-mcp publish-all login-mcp sync-server-json version
+.PHONY: help smoke start clean docs docs-local publish-dry publish publish-mcp publish-all login-mcp sync-server-json version
 
 help:
 	@echo "Targets:"
-	@echo "  smoke           Run the stdio round-trip and login smoke tests"
+	@echo "  smoke           Run the stdio round-trip, login, docs and mock_endpoint smoke tests"
+	@echo "  docs            Rebuild docs/ from the published product docs and the pinned engine docs"
+	@echo "  docs-local      Rebuild docs/ from .docs-platform.json (django's make docs-mcp-dump)"
 	@echo "  start           Run the bridge against stdio (node bin/cli.js)"
 	@echo "  version         Print bridge version from package.json"
 	@echo "  clean           Remove install_cli cache (~/.cache/mockzilla-mcp)"
@@ -18,6 +20,7 @@ help:
 smoke:
 	node scripts/smoke.mjs
 	node scripts/login-smoke.mjs
+	node scripts/docs-smoke.mjs
 	node scripts/mock-endpoint-smoke.mjs
 
 start:
@@ -28,6 +31,18 @@ version:
 
 clean:
 	rm -rf $${HOME}/.cache/mockzilla-mcp
+
+# The product docs come from the bucket Django's publish_docs writes, so this needs prod read access.
+DOCS_BUCKET ?= mz-prod-docs-assets
+AWS ?= aws-vault exec mz-prod -- aws
+
+docs:
+	$(AWS) s3 cp s3://$(DOCS_BUCKET)/export/mcp.json .docs-platform.json
+	node scripts/sync-docs.mjs .docs-platform.json docs
+	rm -f .docs-platform.json
+
+docs-local:
+	node scripts/sync-docs.mjs .docs-platform.json docs
 
 publish-dry:
 	npm pack --dry-run

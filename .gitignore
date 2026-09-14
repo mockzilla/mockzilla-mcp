@@ -4,3 +4,4 @@ node_modules/
 *.idea
 .data
 *.iml
+.docs-platform.json
