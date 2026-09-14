@@ -35,6 +35,7 @@
   "files": [
     "bin",
     "docs",
+    "hosted-tools.json",
     "lib",
     "README.md",
     "LICENSE"

@@ -6,3 +6,5 @@ node_modules/
 *.iml
 .docs-platform.json
 docs/
+hosted-tools.json
+local.mk
