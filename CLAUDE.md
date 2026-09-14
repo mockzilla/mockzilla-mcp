@@ -14,7 +14,8 @@ lib/discover.js discover_specs (filesystem scan + spec summaries).
 lib/docs.js    mockzilla_docs_{topics,read,search}; raw GitHub source +
                MOCKZILLA_DOCS_DIR override for contributors editing docs.
 lib/version.js Bridge version + npm registry update check (bridge_status).
-lib/proxy.js   Hosted-plane forwarding (uses MOCKZILLA_TOKEN).
+lib/auth.js    Hosted-plane login: OAuth in the browser, saved tokens, refresh.
+lib/proxy.js   Hosted-plane forwarding with the saved login or MOCKZILLA_TOKEN.
 lib/util.js    Tiny shared helpers (shellEscape).
 ```
 
@@ -27,7 +28,13 @@ JSON-RPC loop and delegates everything else.
   `lib/tools.js`, handlers live in `lib/install.js` or `lib/local.js`.
   Always available — no auth, no token.
 - **Hosted plane.** Tools the Django server defines at
-  `app/mcp/tools.py`. Proxied through when `MOCKZILLA_TOKEN` is set.
+  `app/mcp/tools.py`. Proxied through once the user logs in with the
+  `login` tool (or `MOCKZILLA_TOKEN` is set). The bridge is its own OAuth
+  client: it identifies itself with the metadata document at
+  `https://mockzilla.org/mcp-client.json` and catches the callback on
+  `127.0.0.1`. Logins are saved per server URL, and every bridge process
+  on the machine shares them, so refreshes take a file lock (refresh
+  tokens rotate, and reusing one revokes the connection).
   When the bridge sees a `tools/call` for a name it doesn't recognise
   locally, it forwards to the hosted endpoint.
 
