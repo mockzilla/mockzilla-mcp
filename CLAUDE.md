@@ -9,7 +9,7 @@ Pure-JS, no build step, ESM, Node ≥ 18.
 bin/cli.js     JSON-RPC entry: stdin loop, dispatch, signal handlers.
 lib/tools.js   The local tool registry (descriptions + handler refs).
 lib/install.js check_cli, install_cli, resolveMockzilla, cache helpers.
-lib/local.js   serve_locally, stop_locally, peek_openapi, child tracking.
+lib/local.js   serve_locally, stop_locally, info, child tracking.
 lib/discover.js discover_specs (filesystem scan + spec summaries).
 lib/docs.js    mockzilla_docs_{topics,read,search}; raw GitHub source +
                MOCKZILLA_DOCS_DIR override for contributors editing docs.
