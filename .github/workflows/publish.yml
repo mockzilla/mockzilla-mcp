@@ -35,4 +35,17 @@ jobs:
             exit 1
           fi
 
-      - run: npm publish --provenance --access public
+      # `make publish` usually ships the version before the release exists.
+      - name: Check npm for this version
+        id: npm
+        run: |
+          pkg="$(node -p "require('./package.json').name")@$(node -p "require('./package.json').version")"
+          if npm view "$pkg" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$pkg is already on npm, skipping publish"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.npm.outputs.published == 'false'
+        run: npm publish --provenance --access public
