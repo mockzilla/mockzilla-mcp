@@ -164,8 +164,8 @@ These tools are always available and never leave the user's machine.
 
 ### OpenAPI exploration and docs
 
-- **`peek_openapi`**
-  Summarise an OpenAPI spec without serving it: `{title, version, openapi_version, endpoint_count, paths}`.
+- **`info`**
+  Summarise an OpenAPI spec without serving it: `{title, version, openapi_version, endpoint_count, paths}`. Also reads `.mockz` packages.
 
 - **`mockzilla_docs_topics`**
   List available Mockzilla doc topics.
@@ -179,7 +179,7 @@ These tools are always available and never leave the user's machine.
 ### Local mocking
 
 - **`serve_locally`**
-  Start a portable mock server on a free port. Accepts a spec file, directory, or public `https` URL. Returns `{url, port, pid, services}`.
+  Start a portable mock server on a free port. Accepts a spec file, directory, or public `https` URL. Returns `{url, port, pid, services}`. For a single spec, `latency`, `mount` and `context` add delay, change the mount path, or set replacement values.
 
 - **`stop_locally`**
   Stop a server started by `serve_locally`.
