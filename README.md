@@ -241,8 +241,8 @@ The bridge keeps everything under `~/.cache/mockzilla-mcp/`:
 ├── bin/mockzilla        # downloaded or go-installed binary
 ├── config.json          # { method, version, invocation? }
 └── mocks/               # mock_endpoint persists static endpoints here
-    └── static/
-        └── <service>/<path>/<method>/index.<ext>
+    └── services/
+        └── <first path segment>/<rest of path>/<method>/index.<ext>
 ```
 
 - `rm -rf ~/.cache/mockzilla-mcp` fully resets the bridge (binary + all mocked endpoints).
