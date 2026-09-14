@@ -44,7 +44,7 @@ Every one of these runs on your own machine:
 - **Reshape specs**: `simplify` cuts a spec down when it is too heavy to mock cleanly, and `pack` turns a folder of services into a `.mockz` archive.
 - **Run mocks**: `serve_locally` starts a server over one or several specs, and can add latency or error responses to one. `stop_locally` stops it, and `call_endpoint` fires a request so the agent can show you the response.
 - **Mock without a spec**: `mock_endpoint` pins a single path to a response you describe, with `list_mock_endpoints` and `clear_mock_endpoints` alongside it.
-- **Read the engine docs**: `mockzilla_docs_topics`, `mockzilla_docs_search` and `mockzilla_docs_read`, so answers about configuration come from the documentation instead of the model's memory.
+- **Read the docs**: `mockzilla_docs_topics`, `mockzilla_docs_search` and `mockzilla_docs_read` give the agent the docs on this site and the engine docs. They come with the bridge, so reading them needs no internet access and no login.
 
 `install_cli` never edits your `PATH`. It keeps its own copy, so a `brew` install stays untouched.
 
@@ -61,13 +61,16 @@ Ask your agent to log in to Mockzilla, or ask it for something hosted. It calls 
 
 The hosted tools appear in your agent as soon as you allow it. If they do not show up, start a new session. The login stays on your machine and renews itself, so you only do this once.
 
-Seven more tools appear after you log in:
+More tools appear after you log in. A Read only login gets four of them:
 
 - **`get_context`** reports which organization and access the agent has.
 - **`list_sims`** pages through the simulations you can see, with their URLs and statuses.
 - **`list_catalog_products`** browses the catalog.
+- **`wait_for_deploy`** waits for a deploy to go active and returns its live URL.
+
+Read and write adds the three that deploy:
+
 - **`deploy_mock_from_catalog`**, **`deploy_mock_from_spec`** and **`deploy_mock_from_url`** create a hosted simulation from a catalog entry, a pasted spec or a spec URL.
-- **`wait_for_deploy`** waits for one to go active and returns its live URL.
 
 A deploy through an agent is a deploy like any other: it counts against your plan and shows up in the app.
 
