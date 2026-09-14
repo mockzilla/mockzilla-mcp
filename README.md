@@ -19,20 +19,20 @@ Source: [github.com/mockzilla/mockzilla-mcp](https://github.com/mockzilla/mockzi
 
 ### Local plane (no account required)
 
-Works entirely on your machine. Nothing leaves the user's box.
+Runs on your machine. No Mockzilla account needed.
 
 From an agent you can:
 
-- Check whether the Mockzilla CLI is installed.
-- Install Mockzilla into a managed cache (no changes to system PATH).
-- Inspect an OpenAPI spec (title, version, endpoint count, paths).
-- Serve any OpenAPI spec locally as a portable mock server.
+- Check whether the Mockzilla CLI is installed, and install it into a managed cache (no changes to system PATH).
+- Inspect and lint an OpenAPI spec, or scan a folder for specs.
+- Simplify a spec that is too heavy to mock, or pack services into a `.mockz` archive.
+- Serve any OpenAPI spec locally as a portable mock server, and call its endpoints.
 - Mock a single HTTP endpoint without a spec.
 - List, stop, and clear locally managed mocks.
 
 ### Hosted plane (log in once)
 
-Ask your agent to log in, or just ask for something hosted. The agent calls the `login` tool, your browser opens the Mockzilla login, and you pick an organization and read-only or read-and-write access. The bridge keeps the login on your machine and renews it by itself. Hosted tools appear as soon as you approve.
+Ask your agent to log in, or ask for something hosted. The agent calls the `login` tool, your browser opens the Mockzilla login, and you pick an organization and read-only or read-and-write access. The bridge keeps the login on your machine and renews it by itself. Hosted tools appear as soon as you approve.
 
 Agents can then:
 
@@ -171,6 +171,9 @@ These tools are always available and never leave the user's machine.
 - **`lint`**
   Find schemas in a spec that no value can satisfy, so a broken spec is caught before serving it: `{clean, defect_count, defects}`.
 
+- **`discover_specs`**
+  Scan a directory for OpenAPI specs and folders of static endpoint files. Returns a `suggested_input` for `serve_locally`.
+
 - **`mockzilla_docs_topics`**
   List available Mockzilla doc topics.
 
@@ -180,6 +183,14 @@ These tools are always available and never leave the user's machine.
 - **`mockzilla_docs_search`**
   Keyword search across all docs; returns top sections with snippets.
 
+### Reshaping specs
+
+- **`simplify`**
+  Drop or reduce union types, strip `x-*` extensions, and optionally cap optional properties per schema. Writes the simplified spec to disk and returns its path.
+
+- **`pack`**
+  Pack a directory of services into a `.mockz` archive that `serve_locally` can serve, even from a URL.
+
 ### Local mocking
 
 - **`serve_locally`**
@@ -187,6 +198,9 @@ These tools are always available and never leave the user's machine.
 
 - **`stop_locally`**
   Stop a server started by `serve_locally`.
+
+- **`call_endpoint`**
+  Make an HTTP request and return `{status, headers, body}`, to show a mock's response. Localhost only unless `allow_remote` is set.
 
 - **`mock_endpoint`**
   Quickly mock a single HTTP endpoint without an OpenAPI spec. Writes a static response into the managed mocks dir and (re)starts the shared server.
@@ -197,13 +211,15 @@ These tools are always available and never leave the user's machine.
 - **`clear_mock_endpoints`**
   Wipe all mocks and stop the managed server.
 
-## Hosted tools
+### Account
 
 - **`login`**
-  Opens the Mockzilla login in the browser and saves the login under `~/.config/mockzilla-mcp/`, one per server URL. Returns right away with the login link.
+  Opens the Mockzilla login in the browser, where the user picks an organization and read-only or read-and-write access. Returns right away with the login link, and hosted tools appear once the user approves. The login is saved under `~/.config/mockzilla-mcp/`, one per server URL, and renewed automatically.
 
 - **`logout`**
-  Revokes the connection and deletes the saved login.
+  Revokes the connection and deletes the saved login. Log out and in again to switch organization or access.
+
+## Hosted tools
 
 After logging in, `@mockzilla/mcp` forwards hosted tools to `mockzilla.org`'s MCP endpoint. At the time of writing, the hosted surface includes:
 
@@ -217,7 +233,7 @@ After logging in, `@mockzilla/mcp` forwards hosted tools to `mockzilla.org`'s MC
 
 Refer to the hosted server's docs or the MCP registry entry for the live tool list.
 
-On a machine without a browser, such as CI or a remote server, set `MOCKZILLA_TOKEN` to an API key from the dashboard instead of logging in. Clients that can't run `npx`, like claude.ai and ChatGPT, can connect straight to `https://platform.mockzilla.org/mcp` and log in there.
+On a machine without a browser, such as CI or a remote server, set `MOCKZILLA_TOKEN` to an API key from the dashboard instead of logging in. The hosted tools are then available from the start.
 
 ## Configuration
 
@@ -226,15 +242,16 @@ On a machine without a browser, such as CI or a remote server, set `MOCKZILLA_TO
 | `MOCKZILLA_TOKEN` | unset | API key (`mz_*`) to use instead of logging in, for machines without a browser. |
 | `MOCKZILLA_MCP_URL` | `https://platform.mockzilla.org/mcp` | Override the hosted endpoint, e.g. `http://localhost:8000/mcp` for local development. |
 | `MOCKZILLA_NO_BROWSER` | unset | Set to `1` to not open a browser on `login`; the agent shows the link instead. |
+| `MOCKZILLA_MCP_CLIENT_ID` | `https://mockzilla.org/mcp-client.json` | OAuth client id `login` uses. Override only for local development, e.g. with a client registered on a local server. |
 | `MOCKZILLA_BIN_VERSION` | matches bridge version | Pin a specific Mockzilla CLI version for `install_cli` to fetch. |
 | `MOCKZILLA_MANAGED_PORT` | `2200` | Preferred port for the `mock_endpoint` server. Falls back to a kernel-picked port if busy. Avoid 3000 (Next.js/React), 5173 (Vite), 8080. Try 2400 or 4444 if 2200 is unavailable. |
 | `MOCKZILLA_DOCS_DIR` | unset | Read docs from this local directory instead of GitHub (useful when editing docs). |
 | `MOCKZILLA_DOCS_REPO` | `mockzilla/mockzilla` | Override the GitHub repo to fetch docs from. |
 | `MOCKZILLA_DOCS_BRANCH` | `main` | Override the branch to fetch docs from. |
 
-## Cache layout
+## Files
 
-The bridge keeps everything under `~/.cache/mockzilla-mcp/`:
+The bridge keeps the CLI and mocks under `~/.cache/mockzilla-mcp/`, and the login under `~/.config/mockzilla-mcp/`:
 
 ```text
 ~/.cache/mockzilla-mcp/
@@ -243,10 +260,14 @@ The bridge keeps everything under `~/.cache/mockzilla-mcp/`:
 └── mocks/               # mock_endpoint persists static endpoints here
     └── services/
         └── <first path segment>/<rest of path>/<method>/index.<ext>
+
+~/.config/mockzilla-mcp/
+└── credentials.json     # saved logins, one per server URL, readable only by you
 ```
 
-- `rm -rf ~/.cache/mockzilla-mcp` fully resets the bridge (binary + all mocked endpoints).
+- `rm -rf ~/.cache/mockzilla-mcp` resets the CLI and all mocked endpoints. The login stays.
 - To wipe just the mocks: `rm -rf ~/.cache/mockzilla-mcp/mocks`.
+- To drop the login, ask the agent to log out. That also revokes it on mockzilla.org.
 - The system `PATH` is never touched, so reset doesn't affect a separate `brew` install of Mockzilla.
 
 ## Updates
@@ -283,7 +304,7 @@ The bridge has two registries to keep in sync: npm (`@mockzilla/mcp`) and the MC
    ```
 
    This will:
-   - Run the smoke test.
+   - Run the smoke tests: the stdio round-trip, login against a fake OAuth server, and `mock_endpoint` against the real CLI (skipped when no CLI is installed).
    - `npm publish` the new tarball.
    - Mirror the version into `server.json`.
    - Log `mcp-publisher` in with the GitHub token from Keychain (see below).

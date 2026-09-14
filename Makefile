@@ -18,6 +18,7 @@ help:
 smoke:
 	node scripts/smoke.mjs
 	node scripts/login-smoke.mjs
+	node scripts/mock-endpoint-smoke.mjs
 
 start:
 	node bin/cli.js
