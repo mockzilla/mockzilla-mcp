@@ -37,9 +37,25 @@ jobs:
       - name: Sync server.json version
         run: make sync-server-json
 
+      - name: Check the registry for this version
+        id: registry
+        env:
+          VERSION: ${{ steps.pkg.outputs.version }}
+        run: |
+          name="$(node -p "require('./server.json').name")"
+          url="https://registry.modelcontextprotocol.io/v0.1/servers/${name/\//%2F}/versions/$VERSION"
+          code="$(curl -s -o /dev/null -w '%{http_code}' "$url")"
+          case "$code" in
+            200) echo "published=true" >> "$GITHUB_OUTPUT"
+                 echo "::notice::$name $VERSION is already in the MCP registry, skipping publish" ;;
+            404) echo "published=false" >> "$GITHUB_OUTPUT" ;;
+            *)   echo "registry returned HTTP $code for $url" >&2; exit 1 ;;
+          esac
+
       # The registry rejects a version npm doesn't have. npm is published by the
       # publish workflow or by hand, so wait for it instead of racing it.
       - name: Wait for the version on npm
+        if: steps.registry.outputs.published == 'false'
         env:
           VERSION: ${{ steps.pkg.outputs.version }}
         run: |
@@ -54,10 +70,13 @@ jobs:
           exit 1
 
       - name: Install mcp-publisher
+        if: steps.registry.outputs.published == 'false'
         run: |
           curl -sfL "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
           ./mcp-publisher --version
 
-      - run: ./mcp-publisher login github-oidc
+      - if: steps.registry.outputs.published == 'false'
+        run: ./mcp-publisher login github-oidc
 
-      - run: ./mcp-publisher publish
+      - if: steps.registry.outputs.published == 'false'
+        run: ./mcp-publisher publish

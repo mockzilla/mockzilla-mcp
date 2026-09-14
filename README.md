@@ -305,7 +305,7 @@ One-time setup:
 
 ### From GitHub Actions
 
-Publishing a GitHub release named `v<package.json version>` runs `.github/workflows/publish-mcp.yml`. It waits up to 10 minutes for that version to appear on npm, then publishes `server.json` to the MCP registry using GitHub OIDC, so no token is needed. It can also be started by hand from the Actions tab.
+Publishing a GitHub release named `v<package.json version>` runs `.github/workflows/publish-mcp.yml`. It skips versions the MCP registry already has, waits up to 10 minutes for the version to appear on npm, then publishes `server.json` using GitHub OIDC, so no token is needed. It can also be started by hand from the Actions tab.
 
 ## Related
 
