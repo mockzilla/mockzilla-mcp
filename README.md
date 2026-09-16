@@ -203,7 +203,7 @@ These tools are always available and never leave the user's machine.
   Make an HTTP request and return `{status, headers, body}`, to show a mock's response. Localhost only unless `allow_remote` is set.
 
 - **`mock_endpoint`**
-  Quickly mock a single HTTP endpoint without an OpenAPI spec. Writes a static response into the managed mocks dir and (re)starts the shared server.
+  Quickly mock a single HTTP endpoint without an OpenAPI spec. Writes a static response into the managed mocks dir and (re)starts the shared server. Always answers 200: a static response carries a body, not a status. For a failing endpoint use `serve_locally` with `errors`.
 
 - **`list_mock_endpoints`**
   List all endpoints currently mocked, plus the running server's URL and the Mockzilla UI URL.
@@ -303,7 +303,7 @@ The bridge has two registries to keep in sync: npm (`@mockzilla/mcp`) and the MC
 
    This will:
    - Build `docs/` and `hosted-tools.json` from the published docs bundle, plus the engine docs at the pinned CLI version. Maintainers only: it needs `DOCS_BUNDLE_CMD` in `local.mk`.
-   - Run the smoke tests: the stdio round-trip, login against a fake OAuth server, the docs tools, and `mock_endpoint` against the real CLI (skipped when no CLI is installed).
+   - Run the smoke tests: the stdio round-trip, login against a fake OAuth server, the docs tools, `mock_endpoint` against the real CLI, and the behavior checks that each tool reports only what the server really does (CLI-dependent ones skip when no CLI is installed).
    - `npm publish` the new tarball.
    - Mirror the version into `server.json`.
    - Log `mcp-publisher` in with the GitHub token from Keychain (see below).

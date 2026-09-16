@@ -7,7 +7,7 @@ help:
 	@echo "Targets:"
 	@echo "  build           Build docs/ and hosted-tools.json from the published bundle and the pinned engine docs"
 	@echo "  build-local     Build from a bundle already saved at .docs-platform.json"
-	@echo "  smoke           Run the stdio round-trip, login, docs and mock_endpoint smoke tests"
+	@echo "  smoke           Run the stdio round-trip, login, docs, mock_endpoint and behavior smoke tests"
 	@echo "  start           Run the bridge against stdio (node bin/cli.js)"
 	@echo "  version         Print bridge version from package.json"
 	@echo "  clean           Remove install_cli cache (~/.cache/mockzilla-mcp)"
@@ -22,6 +22,7 @@ smoke:
 	node scripts/login-smoke.mjs
 	node scripts/docs-smoke.mjs
 	node scripts/mock-endpoint-smoke.mjs
+	node scripts/behavior-smoke.mjs
 
 start:
 	node bin/cli.js
