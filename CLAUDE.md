@@ -124,7 +124,14 @@ over another tool, what shape of input is valid.
 
 ### 3. Smoke-test
 
-There's no test framework yet — smoke-tests are stdio round-trips:
+There's no test framework: the tests are stdio round-trips under
+`scripts/`, all run by `make smoke`. Add coverage to
+`scripts/behavior-smoke.mjs`, which asserts that what a tool *reports*
+matches what the server actually *does*. Every check in it stands for a
+bug where the two disagreed, so a new tool belongs there if it reports
+anything it does not directly control.
+
+A quick one-off round-trip, without the harness:
 
 ```bash
 (cat <<EOF
@@ -136,6 +143,11 @@ sleep 2) | node bin/cli.js
 
 Then restart Claude Desktop and ask the agent something that should
 trigger the tool. The agent's choice (or non-choice) is the real test.
+
+When a tool depends on a CLI feature, gate it on the version. An older
+CLI that accepts a flag and ignores it is worse than one that refuses:
+`serve_locally`'s `errors` silently injected nothing before 2.8.17. See
+`assertErrorsSupported` and `cliHasLint` in `lib/local.js`.
 
 ## Style
 
