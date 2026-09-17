@@ -24,6 +24,7 @@ smoke:
 	node scripts/mock-endpoint-smoke.mjs
 	node scripts/behavior-smoke.mjs
 	node scripts/history-replay-smoke.mjs
+	node scripts/github-smoke.mjs
 
 start:
 	node bin/cli.js
