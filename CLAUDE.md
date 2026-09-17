@@ -54,8 +54,11 @@ Three things that bite:
 
 Teardown only works through a `workflow_dispatch` run with
 `delete: true`; push and pull_request triggers cannot supply it. The
-workflow this bridge writes has that trigger, the official portable
-template does not.
+workflow this bridge writes has that trigger, and both official
+templates gained it too. A repository wired up before that, or with a
+workflow of its own, still may not have it, so the tools report
+`teardown_ready` from the workflow actually in the repo rather than
+assuming.
 
 ## Two planes
 
