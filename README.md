@@ -223,6 +223,21 @@ These tools are always available and never leave the user's machine.
 - **`list_replays`**
   List a service's recordings, with the request values each one is keyed by.
 
+- **`check_github_deployable`**
+  Say whether a repository or folder would deploy a mock, and what is missing if not. Knows both kinds: portable service folders and a codegen Go server. Read-only.
+
+- **`list_github_repos`**
+  The user's repositories, flagging which already publish mocks, so the agent can ask which one to use.
+
+- **`publish_to_github`**
+  Push mocks to one of the user's own repositories and let the Mockzilla action deploy them, giving a URL at `api.mockz.io/gh/<owner>/<repo>/`. No Mockzilla account needed: the first push registers the repository. Merges into an existing services folder rather than replacing it, and never overwrites an existing workflow.
+
+- **`wait_for_github_deploy`**
+  Wait for the workflow run and return the live URL.
+
+- **`unpublish_from_github`**
+  Take the mocks down and free the simulation slot, optionally deleting the repository too.
+
 ### Account
 
 - **`login`**

@@ -15,6 +15,8 @@ lib/history.js  request_history (list) and diagnose_requests (analysis),
                both read from the running server's /.history API.
 lib/replay.js   setup_replay (writes a replay block into config.yml) and
                list_replays, reading /.replay.
+lib/github.js  publish_to_github and friends: push mocks to the user's own
+               repo so the Mockzilla action deploys them. Drives their `gh`.
 lib/docs.js    mockzilla_docs_{topics,read,search}, served from the packaged
                docs/ (MOCKZILLA_DOCS_DIR points at another build).
 docs/          Built by `make build`, not in git. Ships in the npm tarball.
@@ -27,6 +29,36 @@ lib/util.js    Tiny shared helpers (shellEscape).
 
 `bin/cli.js` is the only file the npm bin entry runs. It owns the
 JSON-RPC loop and delegates everything else.
+
+## Publishing to GitHub
+
+`lib/github.js` is the only part of the bridge that writes outside this
+machine. It drives the user's own `gh`, pushes to a repository they
+name, and the deployed URL is public whatever the repo's visibility.
+So: `visibility` has no default, the repo is never invented, an
+existing services folder is merged into rather than replaced, and an
+existing workflow is never overwritten.
+
+Three things that bite:
+
+- **Pushing `.github/workflows/` needs the `workflow` scope.** Without
+  it git rejects the push with an error that never says so, hence
+  `assertScope`.
+- **Portable and codegen repos want different shapes.** A codegen repo
+  (`go.mod` plus `cmd/server`) deploys a built Go server and ignores
+  service folders, so publishing portable mocks into one changes
+  nothing. That is the only way to get real logic or state.
+- **A free simulation runs in 128MB**, and a spec costs far more parsed
+  than on disk, so large specs fail the deploy on memory. Both tools
+  warn and point at `simplify`.
+
+Teardown only works through a `workflow_dispatch` run with
+`delete: true`; push and pull_request triggers cannot supply it. The
+workflow this bridge writes has that trigger, and both official
+templates gained it too. A repository wired up before that, or with a
+workflow of its own, still may not have it, so the tools report
+`teardown_ready` from the workflow actually in the repo rather than
+assuming.
 
 ## Two planes
 
