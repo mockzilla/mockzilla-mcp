@@ -11,6 +11,10 @@ lib/tools.js   The local tool registry (descriptions + handler refs).
 lib/install.js check_cli, install_cli, resolveMockzilla, cache helpers.
 lib/local.js   serve_locally, stop_locally, info, child tracking.
 lib/discover.js discover_specs (filesystem scan + spec summaries).
+lib/history.js  request_history (list) and diagnose_requests (analysis),
+               both read from the running server's /.history API.
+lib/replay.js   setup_replay (writes a replay block into config.yml) and
+               list_replays, reading /.replay.
 lib/docs.js    mockzilla_docs_{topics,read,search}, served from the packaged
                docs/ (MOCKZILLA_DOCS_DIR points at another build).
 docs/          Built by `make build`, not in git. Ships in the npm tarball.
@@ -151,6 +155,19 @@ CLI that accepts a flag and ignores it is worse than one that refuses:
 `assertMetaSupported` and `cliHasLint` in `lib/local.js`. Validate a
 `meta.json` before writing it: one the engine rejects takes its whole
 service down, so a bad call would break every other mock too.
+
+Two traps worth knowing before touching history or replay:
+
+- **The recorded `X-Mockzilla-Source` header is not the one the client
+  got.** A response served as `upstream` is stored with `cache`,
+  because the entry is written on the cache path. `isFromUpstream` does
+  match the wire, so history answers "real backend or mock", not the
+  engine's four-way source taxonomy. Anything finer has to come from
+  the live response header.
+- **`curl -H 'X-Mockzilla-Replay:'` sends nothing.** curl reads a
+  valueless `-H` as "remove this header", so that spelling silently
+  disables replay. The empty form is `-H 'X-Mockzilla-Replay;'`.
+  `call_endpoint` has no such quirk.
 
 ## Style
 

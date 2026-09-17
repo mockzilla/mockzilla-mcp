@@ -211,6 +211,18 @@ These tools are always available and never leave the user's machine.
 - **`clear_mock_endpoints`**
   Wipe all mocks and stop the managed server.
 
+- **`request_history`**
+  List the requests the running server answered: method, URL, status, content type, latency, and whether the response came from an upstream. Pass `id` with `service` for one request's full headers and body. Reads the server's own history API, so no account is needed.
+
+- **`diagnose_requests`**
+  Explain what is wrong with the recorded traffic and where its data came from: a breakdown by origin, status and content type, latency p50/p95/max, and findings such as an upstream that failed and silently fell back to a generated mock, a 404 from a wrong mount prefix, or a JSON body under a non-JSON content type.
+
+- **`setup_replay`**
+  Configure replay for a service: record a response once, then serve it back for every matching request. Returns `recording_scope` saying what each endpoint is keyed by, since with no match fields every call to an endpoint shares one recording. Writes `config.yml` only inside the bridge's own mocks dir; for a folder from your own project it returns the YAML and where it goes.
+
+- **`list_replays`**
+  List a service's recordings, with the request values each one is keyed by.
+
 ### Account
 
 - **`login`**
