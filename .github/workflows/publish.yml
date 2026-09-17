@@ -15,19 +15,28 @@ jobs:
       id-token: write   # OIDC twice over: npm Trusted Publishing, and the AWS role that reads the docs bundle
     steps:
       - uses: actions/checkout@v4
+      # No registry-url on purpose. It writes an .npmrc with
+      # _authToken=XXXXX-XXXXX-XXXXX-XXXXX, setup-node's dummy when no
+      # NODE_AUTH_TOKEN is set, and npm then publishes with that instead of
+      # OIDC. The registry answers a bad credential with 404, not 403.
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
 
-      # Trusted Publishing landed in npm 11.5.1; setup-node ships an
-      # older npm. Use corepack rather than `npm install -g npm@latest`
-      # because the latter occasionally leaves npm in a half-installed
-      # state where transitive deps go missing (e.g. promise-retry).
-      - run: |
-          corepack enable
-          corepack prepare npm@latest --activate
-          npm --version
+      # Trusted Publishing landed in npm 11.5.1 and setup-node ships 10.x.
+      # `corepack prepare --activate` printed success and left 10.9.8 in place,
+      # so install it outright, and fail here rather than in a publish whose
+      # 404 says nothing about the cause.
+      - name: Get an npm that can publish over OIDC
+        run: |
+          v="$(npm --version)"
+          if [ "$(printf '%s\n11.5.1\n' "$v" | sort -V | head -1)" != "11.5.1" ]; then
+            npm install -g npm@latest
+            v="$(npm --version)"
+          fi
+          echo "npm $v"
+          [ "$(printf '%s\n11.5.1\n' "$v" | sort -V | head -1)" = "11.5.1" ] || {
+            echo "npm $v predates Trusted Publishing" >&2; exit 1; }
 
       - name: Verify release tag matches package.json version
         run: |
