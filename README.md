@@ -362,7 +362,12 @@ One-time setup:
 
 ### From GitHub Actions
 
-npm publish from GitHub is disabled for now, so release with `make publish-all`.
+Publishing a GitHub release whose tag matches `package.json` runs `.github/workflows/publish.yml`, which builds the docs, runs the smoke tests and publishes to npm with provenance. It skips a version npm already has, so it is safe to run after `make publish`.
+
+Two things have to be set up for it, both one-time:
+
+- **npm Trusted Publishing.** On npmjs.com, under the package's settings, add a trusted publisher: repository `mockzilla/mockzilla-mcp`, workflow `publish.yml`. No token is stored anywhere.
+- **`AWS_ROLE_ARN` repository secret**, set to the `github_mcp_release_role_arn` output of infra's `live/aws/iam-github-oidc`. The docs bundle is only in S3 - nothing serves it, and the CDN in front of that bucket caches for a day - so the release assumes a role that can read that one key.
 
 `.github/workflows/publish-mcp.yml` runs only when started by hand from the Actions tab. It skips versions the MCP registry already has, waits up to 10 minutes for the version to appear on npm, then publishes `server.json` using GitHub OIDC, so no token is needed.
 
