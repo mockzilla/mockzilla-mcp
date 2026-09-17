@@ -203,7 +203,7 @@ These tools are always available and never leave the user's machine.
   Make an HTTP request and return `{status, headers, body}`, to show a mock's response. Localhost only unless `allow_remote` is set.
 
 - **`mock_endpoint`**
-  Quickly mock a single HTTP endpoint without an OpenAPI spec. Writes a static response into the managed mocks dir and (re)starts the shared server. Always answers 200: a static response carries a body, not a status. For a failing endpoint use `serve_locally` with `errors`.
+  Quickly mock a single HTTP endpoint without an OpenAPI spec. Writes a static response into the managed mocks dir and (re)starts the shared server. Takes `status` and `headers` for a failure or a redirect with a real body (404 with an error payload, 201 with a `Location`); omit `response` for a body-less 204 or 304. Needs mockzilla 2.8.20 or newer.
 
 - **`list_mock_endpoints`**
   List all endpoints currently mocked, plus the running server's URL and the Mockzilla UI URL.
@@ -257,7 +257,9 @@ The bridge keeps the CLI and mocks under `~/.cache/mockzilla-mcp/`, and the logi
 ├── config.json          # { method, version, invocation? }
 └── mocks/               # mock_endpoint persists static endpoints here
     └── services/
-        └── <first path segment>/<rest of path>/<method>/index.<ext>
+        └── <first path segment>/<rest of path>/<method>/
+            ├── index.<ext>   # the response body
+            └── meta.json     # status and headers, written only when set
 
 ~/.config/mockzilla-mcp/
 └── credentials.json     # saved logins, one per server URL, readable only by you
