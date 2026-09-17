@@ -79,14 +79,51 @@ try {
     process.exit(0);
   }
 
-  // Bug 1: mock_endpoint reported a status the static format cannot serve.
-  const refused = await bridge.call("tools/call", {
+  // mock_endpoint used to report a status it never served. It now
+  // writes meta.json, so the status and headers must reach the wire.
+  const failing = await bridge.call("tools/call", {
     name: "mock_endpoint",
-    arguments: { path: "/orders/999", status: 404, response: { error: "nope" } },
+    arguments: {
+      path: "/orders/999",
+      status: 404,
+      response: { error: "not_found" },
+      headers: { "X-Request-Id": "abc123" },
+    },
   });
-  check(refused.result?.isError === true, "mock_endpoint rejects a non-200 status");
-  const why = refused.result.content[0].text;
-  check(/200/.test(why) && /serve_locally/.test(why), `refusal explains the alternatives (got: ${why.slice(0, 120)})`);
+  if (failing.result?.isError) {
+    const text = failing.result.content[0].text;
+    check(/2\.8\.20/.test(text), `status refusal names the version it needs (got: ${text.slice(0, 120)})`);
+    console.log("behavior-smoke: meta.json guard fired (CLI predates the fix)");
+  } else {
+    const made = parse(failing);
+    check(made.status === 404, `reports the status it wrote (got ${made.status})`);
+    const res = await fetch(made.url);
+    check(res.status === 404, `mocked 404 answers 404 (got ${res.status})`);
+    check((await res.json()).error === "not_found", "the body survives a non-200 status");
+    check(res.headers.get("x-request-id") === "abc123", "a custom header reaches the wire");
+
+    // meta.json with no index.<ext>: a response with no body.
+    const empty = parse(
+      await bridge.call("tools/call", {
+        name: "mock_endpoint",
+        arguments: { method: "DELETE", path: "/orders/5", status: 204 },
+      }),
+    );
+    check(empty.file_path === null, "a body-less mock writes no index file");
+    const gone = await fetch(empty.url, { method: "DELETE" });
+    check(gone.status === 204, `body-less mock answers 204 (got ${gone.status})`);
+    check((await gone.text()) === "", "204 carries no body");
+
+    const listed = parse(
+      await bridge.call("tools/call", { name: "list_mock_endpoints", arguments: {} }),
+    );
+    const del = listed.endpoints.find((e) => e.method === "DELETE");
+    check(!!del, "a meta-only endpoint is listed at all");
+    check(del.status === 204, `listing reports its status (got ${del?.status})`);
+    const notFound = listed.endpoints.find((e) => e.path === "/orders/999");
+    check(notFound?.status === 404, `listing reports a 404 mock (got ${notFound?.status})`);
+    await bridge.call("tools/call", { name: "clear_mock_endpoints", arguments: {} });
+  }
 
   const ok = parse(
     await bridge.call("tools/call", {

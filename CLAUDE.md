@@ -146,8 +146,11 @@ trigger the tool. The agent's choice (or non-choice) is the real test.
 
 When a tool depends on a CLI feature, gate it on the version. An older
 CLI that accepts a flag and ignores it is worse than one that refuses:
-`serve_locally`'s `errors` silently injected nothing before 2.8.17. See
-`assertErrorsSupported` and `cliHasLint` in `lib/local.js`.
+`serve_locally`'s `errors` silently injected nothing before 2.8.17, and
+`mock_endpoint`'s `meta.json` needs 2.8.20. See `assertErrorsSupported`,
+`assertMetaSupported` and `cliHasLint` in `lib/local.js`. Validate a
+`meta.json` before writing it: one the engine rejects takes its whole
+service down, so a bad call would break every other mock too.
 
 ## Style
 
