@@ -1,6 +1,6 @@
 {
   "name": "@mockzilla/mcp",
-  "version": "0.2.22",
+  "version": "0.2.23",
   "mcpName": "io.github.mockzilla/mockzilla-mcp",
   "description": "MCP server for Mockzilla (github.com/mockzilla/mockzilla-mcp). Lets Claude, Cursor, and Gemini CLI install the Mockzilla CLI, run local mock servers from OpenAPI specs, and mock individual endpoints, no account needed. Log in from the agent to deploy hosted simulations on mockzilla.org.",
   "keywords": [

@@ -158,12 +158,14 @@ service down, so a bad call would break every other mock too.
 
 Two traps worth knowing before touching history or replay:
 
-- **The recorded `X-Mockzilla-Source` header is not the one the client
-  got.** A response served as `upstream` is stored with `cache`,
-  because the entry is written on the cache path. `isFromUpstream` does
-  match the wire, so history answers "real backend or mock", not the
-  engine's four-way source taxonomy. Anything finer has to come from
-  the live response header.
+- **History only ever holds two kinds of response.** A replayed or
+  cached response short-circuits before the history middleware, so
+  neither is recorded at all: every entry is either from an upstream or
+  generated. Read `isFromUpstream`, which is right on every version.
+  The stored `X-Mockzilla-Source` was the upstream's own tag rather
+  than ours before engine 2.8.21, so it could read `cache` on a
+  response served as `upstream`. Tell the user what is missing: a call
+  absent from history was probably replayed or cached, not skipped.
 - **`curl -H 'X-Mockzilla-Replay:'` sends nothing.** curl reads a
   valueless `-H` as "remove this header", so that spelling silently
   disables replay. The empty form is `-H 'X-Mockzilla-Replay;'`.

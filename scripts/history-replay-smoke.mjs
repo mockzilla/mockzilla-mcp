@@ -88,6 +88,13 @@ try {
     diag.findings.some((f) => f.kind === "not_found"),
     `diagnose flags the 404 (kinds: ${diag.findings.map((f) => f.kind).join(",") || "none"})`,
   );
+  // Replayed and cached responses never reach the history middleware.
+  // Without saying so, a log of nothing but `mock` reads as "replay is
+  // not working" when replay is serving every call.
+  check(
+    /replay/i.test(diag.not_counted || "") && /cache/i.test(diag.not_counted || ""),
+    "diagnose says which responses history cannot see",
+  );
 
   // A folder outside the bridge's mocks dir is the user's: return the
   // YAML, do not edit it.
