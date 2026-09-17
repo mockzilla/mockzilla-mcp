@@ -256,9 +256,10 @@ its alt text, so nothing in a topic tempts the agent to fetch a URL.
 A docs change reaches agents with the next release: publish the docs, then
 either cut a GitHub release or run `make publish-all`. Both build first. The
 release workflow reads the bundle straight from S3 with the `github-mcp-release`
-role, which can read that one key and nothing else. The MCP registry workflow
-still only runs when started by hand. To preview an unpublished bundle, save it
-as `.docs-platform.json` and run `make build-local`.
+role, which can read that one key and nothing else. A release also starts the
+MCP registry workflow, which polls npm for the version before it publishes
+`server.json`. To preview an unpublished bundle, save it as
+`.docs-platform.json` and run `make build-local`.
 
 ## Versioning
 
