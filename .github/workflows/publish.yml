@@ -4,13 +4,15 @@ on:
   release:
     types: [published]
 
+env:
+  AWS_REGION: eu-central-1
+
 jobs:
   publish:
-    if: false  # TEMP: npm publish disabled, it cannot build the docs; publish with make publish
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write   # OIDC token for npm Trusted Publishing + provenance
+      id-token: write   # OIDC twice over: npm Trusted Publishing, and the AWS role that reads the docs bundle
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -36,7 +38,7 @@ jobs:
             exit 1
           fi
 
-      # `make publish` usually ships the version before the release exists.
+      # `make publish` can still ship a version by hand before the release exists.
       - name: Check npm for this version
         id: npm
         run: |
@@ -47,6 +49,26 @@ jobs:
           else
             echo "published=false" >> "$GITHUB_OUTPUT"
           fi
+
+      # The product docs bundle lives only in S3: nothing serves it, and the
+      # CDN in front of that bucket caches for a day, so the release reads the
+      # key directly like every other consumer. github-mcp-release is a role
+      # that can do this and nothing else (infra live/aws/iam-github-oidc).
+      - name: Assume the docs-bundle role
+        if: steps.npm.outputs.published == 'false'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build docs and hosted tools
+        if: steps.npm.outputs.published == 'false'
+        run: make build DOCS_BUNDLE_CMD="aws s3 cp s3://mz-prod-docs-assets/export/mcp.json -"
+
+      # The CLI-backed smokes skip on a runner with no mockzilla; the rest run.
+      - name: Smoke
+        if: steps.npm.outputs.published == 'false'
+        run: make smoke
 
       - if: steps.npm.outputs.published == 'false'
         run: npm publish --provenance --access public
