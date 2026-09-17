@@ -323,6 +323,10 @@ See [CLAUDE.md](https://github.com/mockzilla/mockzilla-mcp/blob/main/CLAUDE.md) 
 
 The bridge has two registries to keep in sync: npm (`@mockzilla/mcp`) and the MCP registry (`server.json`). Skipping the second one leaves discovery clients pinned to the previous tarball.
 
+The usual way is to bump `version` in `package.json`, merge, and publish a GitHub release tagged `v<version>`. That covers both registries: see [From GitHub Actions](#from-github-actions) below.
+
+To release by hand instead:
+
 1. Bump `version` in `package.json`.
 2. Run:
 
@@ -369,7 +373,9 @@ Two things have to be set up for it, both one-time:
 - **npm Trusted Publishing.** On npmjs.com, under the package's settings, add a trusted publisher: repository `mockzilla/mockzilla-mcp`, workflow `publish.yml`. No token is stored anywhere.
 - **`AWS_ROLE_ARN` repository secret**, set to the `github_mcp_release_role_arn` output of infra's `live/aws/iam-github-oidc`. The docs bundle is only in S3 - nothing serves it, and the CDN in front of that bucket caches for a day - so the release assumes a role that can read that one key.
 
-`.github/workflows/publish-mcp.yml` runs only when started by hand from the Actions tab. It skips versions the MCP registry already has, waits up to 10 minutes for the version to appear on npm, then publishes `server.json` using GitHub OIDC, so no token is needed.
+`.github/workflows/publish-mcp.yml` starts on the same release and covers the other registry. It skips versions the MCP registry already has, waits up to 10 minutes for the version to appear on npm, then publishes `server.json` using GitHub OIDC, so no token is needed. It can still be started by hand from the Actions tab.
+
+The two run in parallel rather than in sequence. The wait loop is what keeps that safe, and it is needed anyway: npm accepts a tarball before it can be read back.
 
 ## Related
 

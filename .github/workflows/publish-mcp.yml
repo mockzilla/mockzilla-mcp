@@ -1,9 +1,11 @@
 name: publish-mcp
 
 on:
-  # TEMP: not on release while npm publish runs from make publish; start it by hand.
-  # release:
-  #   types: [published]
+  # Runs alongside publish.yml, not after it. Both start on the same release and
+  # this one polls npm for up to 10 minutes, which is also what covers npm's
+  # asynchronous publish: the tarball is accepted before it can be read back.
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
