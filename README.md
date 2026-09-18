@@ -62,7 +62,7 @@ You can use these directly from Claude Code, Claude Desktop, Cursor, or Gemini C
 - "Log me in to Mockzilla."
 - "List the sims I have deployed."
 - "Show me the catalog products."
-- "Deploy a Stripe sandbox named `stripe-test` and give me the live URL."
+- "Deploy a Stripe mock named `stripe-test` and give me the live URL."
 - "Create a hosted mock from this OpenAPI URL on mockzilla.org."
 
 ## Install
