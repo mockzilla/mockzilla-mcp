@@ -107,6 +107,26 @@ jobs:
 `,
 );
 
+// A stand-in gh, so wait_for_github_deploy runs with no login and no network.
+const bin = path.join(home, "bin");
+await mkdir(bin, { recursive: true });
+await writeFile(
+  path.join(bin, "gh"),
+  `#!/bin/sh
+case "$1 $2" in
+  "--version "|"auth status") exit 0 ;;
+  "run list") echo '[{"databaseId":7,"status":"completed","conclusion":"success","url":"https://github.com/acme/mocks/actions/runs/7"}]' ;;
+  "run view")
+    case "$*" in
+      *acme/mocks*) printf 'publish\\tUNKNOWN STEP\\t2026-09-25T10:00:00Z ##[notice]Mockzilla simulation live at https://mocks-2.api.mockz.io\\n' ;;
+      *) printf 'publish\\tUNKNOWN STEP\\t2026-09-25T10:00:00Z Nothing to publish\\n' ;;
+    esac ;;
+  *) echo "unexpected gh call: $*" >&2; exit 1 ;;
+esac
+`,
+  { mode: 0o755 },
+);
+
 const bridge = startBridge();
 try {
   await bridge.call("initialize", { protocolVersion: "2025-06-18" });
@@ -242,6 +262,27 @@ try {
     "the refusal tells the agent to ask the user rather than pick",
   );
 
+  // Mockzilla picks the host, so the URL has to come from the run, never from the repo name.
+  const live = parse(
+    await bridge.call("tools/call", {
+      name: "wait_for_github_deploy",
+      arguments: { repo: "acme/mocks", timeout_seconds: 30 },
+    }),
+  );
+  check(
+    live.mock_url === "https://mocks-2.api.mockz.io",
+    `wait_for_github_deploy returns the URL the action printed (got ${live.mock_url})`,
+  );
+
+  const quiet = parse(
+    await bridge.call("tools/call", {
+      name: "wait_for_github_deploy",
+      arguments: { repo: "acme/closed", timeout_seconds: 30 },
+    }),
+  );
+  check(quiet.mock_url === null, `a run that printed no URL returns none (got ${quiet.mock_url})`);
+  check(/run_url/.test(quiet.notes), "and points at run_url instead");
+
   console.log("github-smoke: ok");
 } finally {
   bridge.stop();
@@ -250,7 +291,13 @@ try {
 function startBridge() {
   const child = spawn(process.execPath, ["bin/cli.js"], {
     stdio: ["pipe", "pipe", "inherit"],
-    env: { ...process.env, HOME: home, MOCKZILLA_MANAGED_PORT: "0", MOCKZILLA_TOKEN: "" },
+    env: {
+      ...process.env,
+      HOME: home,
+      PATH: `${bin}${path.delimiter}${process.env.PATH}`,
+      MOCKZILLA_MANAGED_PORT: "0",
+      MOCKZILLA_TOKEN: "",
+    },
   });
   const waiting = new Map();
   let buffer = "";
