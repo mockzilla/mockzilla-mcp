@@ -19,7 +19,10 @@ try {
 
   const listed = parse(await bridge.call("tools/call", { name: "mockzilla_docs_topics", arguments: {} }));
   const slugs = listed.categories.map((c) => c.slug);
-  check(slugs.includes("getting-started") && slugs.includes("engine"), `product and engine categories (got ${slugs.join(", ")})`);
+  check(
+    ["getting-started", "engine", "codegen"].every((s) => slugs.includes(s)),
+    `product, engine and codegen categories (got ${slugs.join(", ")})`,
+  );
   const ids = listed.categories.flatMap((c) => c.topics.map((t) => t.id));
   check(listed.categories.every((c) => c.topics.every((t) => t.title && t.summary)), "every topic has a title and summary");
 
@@ -33,7 +36,9 @@ try {
       const read = parse(response);
       for (const topic of read.topics) {
         check(topic.markdown.startsWith(`# ${topic.title}`), `${topic.id} starts with its title`);
-        check(!/\]\((?!https?:)[^)]*\)/.test(topic.markdown), `${topic.id} has no relative links left`);
+        // Code spans can hold Go like `runtime.Null[string]()`, which is not a link.
+        const prose = topic.markdown.replace(/(`+)[\s\S]*?\1/g, "");
+        check(!/\]\((?!https?:)[^)]*\)/.test(prose), `${topic.id} has no relative links left`);
         seen.add(topic.id);
       }
       pending = read.remaining ? { topics: read.remaining } : null;
@@ -45,6 +50,11 @@ try {
     await bridge.call("tools/call", { name: "mockzilla_docs_search", arguments: { query: "what is a simulation" } }),
   );
   check(found.results.length > 0, "search finds something for 'what is a simulation'");
+
+  const generate = parse(
+    await bridge.call("tools/call", { name: "mockzilla_docs_read", arguments: { topics: ["engine/commands/generate"] } }),
+  );
+  check(/topic `codegen\/config`/.test(generate.topics[0].markdown), "the generate command links to the codegen config topic");
 
   const bad = await bridge.call("tools/call", { name: "mockzilla_docs_read", arguments: { topics: ["no/such-topic"] } });
   check(bad.result.isError === true, "an unknown topic is a tool error");
