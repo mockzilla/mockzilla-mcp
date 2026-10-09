@@ -9,7 +9,8 @@ Pure-JS, no build step, ESM, Node ≥ 18.
 bin/cli.js     JSON-RPC entry: stdin loop, dispatch, signal handlers.
 lib/tools.js   The local tool registry (descriptions + handler refs).
 lib/install.js check_cli, install_cli, resolveMockzilla, cache helpers.
-lib/local.js   serve_locally, stop_locally, info, child tracking.
+lib/local.js   serve_locally, stop_locally, info, lint, simplify, pack,
+               generate, child tracking.
 lib/discover.js discover_specs (filesystem scan + spec summaries).
 lib/history.js  request_history (list) and diagnose_requests (analysis),
                both read from the running server's /.history API.
@@ -183,8 +184,10 @@ trigger the tool. The agent's choice (or non-choice) is the real test.
 When a tool depends on a CLI feature, gate it on the version. An older
 CLI that accepts a flag and ignores it is worse than one that refuses:
 `serve_locally`'s `errors` silently injected nothing before 2.8.17, and
-`mock_endpoint`'s `meta.json` needs 2.8.20. See `assertErrorsSupported`,
-`assertMetaSupported` and `cliHasLint` in `lib/local.js`. Validate a
+`mock_endpoint`'s `meta.json` needs 2.8.20. A new subcommand is worse
+still: an older CLI reads `lint` or `generate` as a path to serve, so
+`cliHasCommand` checks the usage text first. See `assertErrorsSupported`,
+`assertMetaSupported` and `cliHasCommand` in `lib/local.js`. Validate a
 `meta.json` before writing it: one the engine rejects takes its whole
 service down, so a bad call would break every other mock too.
 
@@ -240,7 +243,7 @@ no network, no login, and no URL for the agent to fetch. It holds `index.json`
 markdown file per topic. It is built, not committed: run `make build` before
 running the bridge from a checkout.
 
-Two sources, both built by `scripts/build.mjs`, which also writes `hosted-tools.json`:
+Three sources, all built by `scripts/build.mjs`, which also writes `hosted-tools.json`:
 
 - **Product docs.** Mockzilla publishes them, with the hosted tool
   definitions, as one bundle. `make build` fetches it with `DOCS_BUNDLE_CMD`,
@@ -249,6 +252,12 @@ Two sources, both built by `scripts/build.mjs`, which also writes `hosted-tools.
 - **Engine docs.** The `docs/` folder of github.com/mockzilla/mockzilla at the
   tag `MOCKZILLA_VERSION` pins, so they describe the CLI the bridge installs.
   `MOCKZILLA_ENGINE_DIR=../mockzilla` reads a local checkout instead.
+- **Codegen docs.** The README and `docs/` of
+  github.com/mockzilla/mockzilla-codegen at the version the engine's
+  `go.mod` requires, since that is what `mockzilla generate` runs. They
+  go under `codegen/`, the README as `codegen/overview`.
+  `MOCKZILLA_CODEGEN_DIR=../mockzilla-codegen` reads a local checkout.
+  A relative link to a file that is not a topic becomes its GitHub URL.
 
 The script turns a link to another topic into that topic's id and an image into
 its alt text, so nothing in a topic tempts the agent to fetch a URL.

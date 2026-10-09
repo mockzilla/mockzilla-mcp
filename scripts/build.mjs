@@ -1,6 +1,7 @@
 // Builds what the npm release packs from the published bundle: docs/ (plus the engine docs at the pinned CLI
-// version) and hosted-tools.json. Usage: node scripts/build.mjs <bundle.json> [docs-dir].
-// MOCKZILLA_ENGINE_DIR reads a local engine checkout instead of downloading it.
+// version, and the docs of the mockzilla-codegen version that engine embeds) and hosted-tools.json.
+// Usage: node scripts/build.mjs <bundle.json> [docs-dir].
+// MOCKZILLA_ENGINE_DIR and MOCKZILLA_CODEGEN_DIR read local checkouts instead of downloading them.
 
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -25,6 +26,22 @@ const ENGINE_SKIP = new Set(["index.md", "api/index.md"]);
 // fake-list.md opens straight into its list, so there is no sentence to take a summary from.
 const ENGINE_SUMMARIES = { "fake-list.md": "Every fake function a context can use to generate a value, such as fake:address.city." };
 
+const CODEGEN_CATEGORY = {
+  slug: "codegen",
+  name: "Code generation",
+  description:
+    "mockzilla-codegen, the generator behind `mockzilla generate`: Go models, servers, clients and MCP tools from an OpenAPI spec, written into the user's own project. Not codegen mode, which builds mockzilla services.",
+};
+const CODEGEN_MODULE = "github.com/mockzilla/mockzilla-codegen";
+const CODEGEN_REPO = "https://github.com/mockzilla/mockzilla-codegen";
+// These pages open on a sentence too short or too cut off to tell an agent what is in them.
+const CODEGEN_SUMMARIES = {
+  "docs/config.md": "Every key of codegen.yaml: the spec with its filters and overlays, output files, models, and the server, client and MCP blocks, with their defaults.",
+  "docs/getting-started.md": "Installing, the generate command and its flags, checking generated files in CI, and the runtime guard that ties generated code to the runtime version.",
+  "docs/server.md": "What a server block generates: the service interface, the HTTP adapter, a router for one of 14 frameworks, and starter files.",
+  "docs/templates.md": "Replacing blocks of the generated code with your own Go templates, and writing extra files from them.",
+};
+
 const [bundlePath, outArg = "docs"] = process.argv.slice(2);
 if (!bundlePath) {
   console.error("usage: node scripts/build.mjs <bundle.json> [docs-dir]");
@@ -32,24 +49,34 @@ if (!bundlePath) {
 }
 
 const bundle = JSON.parse(await readFile(bundlePath, "utf8"));
-if (bundle.categories.some((c) => c.slug === ENGINE_CATEGORY.slug)) {
-  throw new Error(`a product docs category is named "${ENGINE_CATEGORY.slug}", which the engine docs use`);
+for (const { slug } of [ENGINE_CATEGORY, CODEGEN_CATEGORY]) {
+  if (bundle.categories.some((c) => c.slug === slug)) {
+    throw new Error(`a product docs category is named "${slug}", which the repo docs use`);
+  }
 }
 
 const localEngine = process.env.MOCKZILLA_ENGINE_DIR;
-const engineRoot = localEngine || (await downloadEngine(MOCKZILLA_VERSION));
+const engineRoot = localEngine || (await downloadRepo("mockzilla", MOCKZILLA_VERSION));
 const engine = await engineTopics(engineRoot);
+const codegenVersion = await embeddedCodegenVersion(engineRoot);
 if (!localEngine) await rm(path.dirname(engineRoot), { recursive: true, force: true });
 
+const localCodegen = process.env.MOCKZILLA_CODEGEN_DIR;
+const codegenRoot = localCodegen || (await downloadRepo("mockzilla-codegen", codegenVersion));
+const codegen = await codegenTopics(codegenRoot, codegenVersion);
+if (!localCodegen) await rm(path.dirname(codegenRoot), { recursive: true, force: true });
+
 const sources = [
-  ...bundle.topics.map((t) => ({ ...t, relativeTo: null })),
+  ...bundle.topics.map((t) => ({ ...t, repo: null, relativeTo: null })),
   ...engine,
+  ...codegen,
 ];
-const idByUrl = new Map(sources.map((t) => [normalizeUrl(t.url), t.id]));
+const idByUrl = new Map(sources.flatMap((t) => [t.url, ...(t.aliases ?? [])].map((u) => [normalizeUrl(u), t.id])));
+const idByFile = new Map(sources.filter((t) => t.repo).map((t) => [`${t.repo.name}:${t.relativeTo}`, t.id]));
 
 const topics = sources.map((t) => ({
   meta: { id: t.id, category: t.category, title: t.title, summary: t.summary, url: t.url },
-  markdown: forAgents(t.markdown, (target) => resolveTopic(target, t.relativeTo, idByUrl)),
+  markdown: forAgents(t.markdown, (target) => resolveLink(target, t, idByUrl, idByFile)),
 }));
 
 const out = path.resolve(outArg);
@@ -61,11 +88,15 @@ for (const { meta, markdown } of topics) {
 }
 const index = {
   engine_version: MOCKZILLA_VERSION,
-  categories: [...bundle.categories, ENGINE_CATEGORY],
+  codegen_version: codegenVersion,
+  categories: [...bundle.categories, ENGINE_CATEGORY, CODEGEN_CATEGORY],
   topics: topics.map((t) => t.meta),
 };
 await writeFile(path.join(out, "index.json"), JSON.stringify(index, null, 2) + "\n");
-console.log(`build: ${bundle.topics.length} product topics, ${engine.length} engine topics (v${MOCKZILLA_VERSION}) -> ${out}`);
+console.log(
+  `build: ${bundle.topics.length} product topics, ${engine.length} engine topics (v${MOCKZILLA_VERSION}), ` +
+    `${codegen.length} codegen topics (v${codegenVersion}) -> ${out}`,
+);
 
 // A bundle without tools still builds; hosted tools then stay hidden until login.
 const hostedTools = bundle.tools ?? [];
@@ -73,11 +104,11 @@ if (!bundle.tools) console.warn("build: the bundle has no tools, so hosted tools
 await writeFile(HOSTED_TOOLS_FILE, JSON.stringify({ tools: hostedTools }, null, 2) + "\n");
 console.log(`build: ${hostedTools.length} hosted tools -> ${HOSTED_TOOLS_FILE}`);
 
-async function downloadEngine(version) {
-  const url = `https://codeload.github.com/mockzilla/mockzilla/tar.gz/refs/tags/v${version}`;
+async function downloadRepo(repo, version) {
+  const url = `https://codeload.github.com/mockzilla/${repo}/tar.gz/refs/tags/v${version}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`engine docs download failed: ${res.status} for ${url}`);
-  const dir = await mkdtemp(path.join(tmpdir(), "mockzilla-engine-"));
+  if (!res.ok) throw new Error(`${repo} docs download failed: ${res.status} for ${url}`);
+  const dir = await mkdtemp(path.join(tmpdir(), `${repo}-`));
   const tar = spawn("tar", ["-xz", "-C", dir], { stdio: ["pipe", "inherit", "inherit"] });
   const exited = new Promise((resolve, reject) => {
     tar.once("error", reject);
@@ -105,10 +136,58 @@ async function engineTopics(root) {
       summary: ENGINE_SUMMARIES[file] ?? summaryOf(markdown),
       url: `${ENGINE_SITE}/${page}/`,
       markdown,
+      repo: { name: "mockzilla" },
+      relativeTo: `docs/${file}`,
+    });
+  }
+  return topics;
+}
+
+// The docs that describe `mockzilla generate` are those of the generator version the engine was built with.
+async function embeddedCodegenVersion(root) {
+  const goMod = await readFile(path.join(root, "go.mod"), "utf8");
+  const version = goMod.match(new RegExp(`^\\s*${CODEGEN_MODULE.replace(/[.]/g, "\\.")}\\s+v(\\S+)`, "m"))?.[1];
+  if (!version) throw new Error(`the engine's go.mod does not require ${CODEGEN_MODULE}`);
+  return version;
+}
+
+// The README is the overview, and every page under docs/ follows it. The site is GitHub itself.
+async function codegenTopics(root, version) {
+  const repo = { name: "mockzilla-codegen", blob: `${CODEGEN_REPO}/blob/v${version}` };
+  const docs = [];
+  await walk(path.join(root, "docs"), "", docs);
+  const files = ["README.md", ...docs.sort().map((f) => `docs/${f}`)];
+  const topics = [];
+  for (const file of files) {
+    let markdown = await readFile(path.join(root, file), "utf8");
+    const isReadme = file === "README.md";
+    if (isReadme) markdown = `# mockzilla-codegen\n\n${stripHtmlHeader(markdown)}`;
+    const page = isReadme ? "overview" : file.replace(/^docs\//, "").replace(/\.md$/, "");
+    const title = titleLine(markdown);
+    if (!title) throw new Error(`${file} has no title`);
+    topics.push({
+      id: `${CODEGEN_CATEGORY.slug}/${page}`,
+      category: CODEGEN_CATEGORY.slug,
+      title,
+      summary: CODEGEN_SUMMARIES[file] ?? summaryOf(markdown),
+      url: isReadme ? CODEGEN_REPO : `${repo.blob}/${file}`,
+      aliases: isReadme ? [] : [`${CODEGEN_REPO}/blob/main/${file}`],
+      markdown,
+      repo,
       relativeTo: file,
     });
   }
   return topics;
+}
+
+// A README opens with a centered logo and badges, all HTML, that mean nothing to an agent.
+function stripHtmlHeader(markdown) {
+  let rest = markdown.trimStart();
+  for (;;) {
+    const block = rest.match(/^<(h1|div|p)\b[^>]*>[\s\S]*?<\/\1>\s*/);
+    if (!block) return rest;
+    rest = rest.slice(block[0].length);
+  }
 }
 
 // Nav order from mkdocs.yml, then any page the nav left out.
@@ -205,8 +284,9 @@ function forAgents(markdown, resolve) {
     text.replace(inline, (match, ticks, alt, image, label, target) => {
       if (ticks) return match;
       if (image !== undefined) return alt ? `(Image: ${alt})` : "";
-      const id = resolve(target);
+      const { id, url } = resolve(target);
       if (id) return `${label} (topic \`${id}\`)`;
+      if (url) return `[${label}](${url})`;
       return target.startsWith("#") ? label : match;
     });
 
@@ -234,13 +314,17 @@ function forAgents(markdown, resolve) {
   return out.join("\n");
 }
 
-function resolveTopic(target, relativeTo, idByUrl) {
-  if (/^https?:\/\//.test(target)) return idByUrl.get(normalizeUrl(target)) ?? null;
-  if (!relativeTo) return null;
-  const file = target.split("#")[0];
-  if (!file.endsWith(".md")) return null;
-  const page = path.posix.normalize(path.posix.join(path.posix.dirname(relativeTo), file)).replace(/\.md$/, "");
-  return idByUrl.get(normalizeUrl(`${ENGINE_SITE}/${page}/`)) ?? null;
+// A link to another topic becomes its id. A relative link to any other file of a repo on GitHub becomes
+// its absolute URL there, since a path means nothing outside the checkout.
+function resolveLink(target, topic, idByUrl, idByFile) {
+  if (/^https?:\/\//.test(target)) return { id: idByUrl.get(normalizeUrl(target)) ?? null };
+  if (!topic.repo || target.startsWith("#") || /^[a-z]+:/i.test(target)) return { id: null };
+  const [file, anchor] = target.split("#");
+  const repoPath = path.posix.normalize(path.posix.join(path.posix.dirname(topic.relativeTo), file));
+  const id = idByFile.get(`${topic.repo.name}:${repoPath}`);
+  if (id) return { id };
+  if (!topic.repo.blob) return { id: null };
+  return { id: null, url: `${topic.repo.blob}/${repoPath}${anchor ? `#${anchor}` : ""}` };
 }
 
 function normalizeUrl(url) {

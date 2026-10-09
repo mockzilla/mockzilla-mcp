@@ -26,6 +26,7 @@ From an agent you can:
 - Check whether the Mockzilla CLI is installed, and install it into a managed cache (no changes to system PATH).
 - Inspect and lint an OpenAPI spec, or scan a folder for specs.
 - Simplify a spec that is too heavy to mock, or pack services into a `.mockz` archive.
+- Generate Go code from a spec: models, a server for one of 14 routers, a client, or MCP tools.
 - Serve any OpenAPI spec locally as a portable mock server, and call its endpoints.
 - Mock a single HTTP endpoint without a spec.
 - List, stop, and clear locally managed mocks.
@@ -56,6 +57,7 @@ You can use these directly from Claude Code, Claude Desktop, Cursor, or Gemini C
 - "Mock `POST /checkout` to return a 402 response."
 - "List the mock endpoints you're managing."
 - "Stop the mock server you started."
+- "Generate Go models and a chi server for `openapi.yml` into `./api`."
 
 ### Hosted plane (after logging in)
 
@@ -175,7 +177,7 @@ These tools are always available and never leave the user's machine.
   Scan a directory for OpenAPI specs and folders of static endpoint files. Returns a `suggested_input` for `serve_locally`.
 
 - **`mockzilla_docs_topics`**
-  List the Mockzilla docs, by category, with each topic's title and summary. The product docs from mockzilla.org and the engine docs both ship inside the package, so no network or login is needed.
+  List the Mockzilla docs, by category, with each topic's title and summary. The product docs from mockzilla.org, the engine docs and the mockzilla-codegen docs all ship inside the package, so no network or login is needed.
 
 - **`mockzilla_docs_read`**
   Return the full markdown for one or more topics, or a whole category.
@@ -190,6 +192,11 @@ These tools are always available and never leave the user's machine.
 
 - **`pack`**
   Pack a directory of services into a `.mockz` archive that `serve_locally` can serve, even from a URL.
+
+### Generating code
+
+- **`generate`**
+  Run `mockzilla generate`, the built-in [mockzilla-codegen](https://github.com/mockzilla/mockzilla-codegen): Go models from a spec, plus a server, a client or MCP tools when asked. Reads `codegen.yaml` when the folder has one. Writes the files, lists them first with `dry_run`, or reports stale ones with `check`, along with the spec's errors and warnings. Needs CLI 2.11.0 or newer.
 
 ### Local mocking
 
@@ -382,6 +389,7 @@ The two run in parallel rather than in sequence. The wait loop is what keeps tha
 - [mockzilla.org](https://mockzilla.org) - hosted API simulation, per-PR mock URLs, GitHub Actions integration
 - [mockzilla/mockzilla](https://github.com/mockzilla/mockzilla) - the core open-source API mock server
 - [Documentation](https://mockzilla.github.io/mockzilla/) - full usage guide for portable and codegen modes
+- [mockzilla/mockzilla-codegen](https://github.com/mockzilla/mockzilla-codegen) - the Go code generator behind `mockzilla generate`
 
 ## License
 

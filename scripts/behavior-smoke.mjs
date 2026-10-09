@@ -1,10 +1,11 @@
-// Regression cover for four bugs where a tool answered the agent with
+// Regression cover for bugs where a tool answered the agent with
 // something the server did not do. Each check below failed before the
-// fix. Skips when no mockzilla CLI is available.
+// fix, or covers a tool that reports what the CLI did. Skips when no
+// mockzilla CLI is available.
 // Run via `node scripts/behavior-smoke.mjs`.
 
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -45,6 +46,25 @@ paths:
               schema:
                 type: object
                 properties: {id: {type: integer}, name: {type: string}}
+`;
+
+// The default of oneWay is a string on a boolean, which generate warns about and leaves out.
+const SPEC_WITH_WARNING = `openapi: 3.0.0
+info: {title: Flights, version: 1.0.0}
+paths:
+  /flights:
+    get:
+      operationId: listFlights
+      parameters:
+        - {name: oneWay, in: query, schema: {type: boolean, default: "false"}}
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {type: object, properties: {id: {type: integer}}}
 `;
 
 const specDir = path.join(home, "specs");
@@ -190,6 +210,63 @@ try {
   );
   check(tree.spec_files.length === 0, "nested tree has no top-level specs");
   check(/vendor-a/.test(tree.notes || ""), `notes name the subdir to recurse into (got: ${tree.notes})`);
+
+  // generate reports files it did not write itself, so check them on disk.
+  const genDir = path.join(home, "gen");
+  await mkdir(genDir, { recursive: true });
+  await writeFile(path.join(genDir, "openapi.yml"), SPEC_WITH_WARNING);
+  const dry = await bridge.call("tools/call", {
+    name: "generate",
+    arguments: { dir: genDir, spec: "openapi.yml", server: "chi", mode: "dry_run" },
+  });
+  if (dry.result?.isError) {
+    const text = dry.result.content[0].text;
+    check(/2\.11\.0/.test(text), `generate refusal names the version it needs (got: ${text.slice(0, 120)})`);
+    console.log("behavior-smoke: generate guard fired (CLI predates the command)");
+  } else {
+    const planned = parse(dry);
+    check(planned.files.some((f) => f.file === "gen.go"), `dry run lists gen.go (got ${JSON.stringify(planned.files)})`);
+    check(planned.files[0].parts.includes("server.router"), "a chi server adds the router part");
+    check(!(await readdir(genDir)).includes("gen.go"), "a dry run writes nothing");
+
+    const written = parse(
+      await bridge.call("tools/call", {
+        name: "generate",
+        arguments: { dir: genDir, spec: "openapi.yml", server: "chi" },
+      }),
+    );
+    check((await readdir(genDir)).includes("gen.go"), "write mode writes gen.go");
+    check(written.warnings === 1, `the bad default is one warning (got ${written.warnings})`);
+    check(written.diagnostics[0]?.code === "default-ignored", `the warning keeps its code (got ${written.diagnostics[0]?.code})`);
+    check(written.ok === true, "a warning alone does not fail the run");
+    check(written.go_mod === undefined && /go mod init/.test(written.notes), "no go.mod is called out");
+
+    const fresh = parse(
+      await bridge.call("tools/call", {
+        name: "generate",
+        arguments: { dir: genDir, spec: "openapi.yml", server: "chi", mode: "check" },
+      }),
+    );
+    check(fresh.up_to_date === true, "check right after write is up to date");
+    const stale = parse(
+      await bridge.call("tools/call", {
+        name: "generate",
+        arguments: { dir: genDir, spec: "openapi.yml", mode: "check" },
+      }),
+    );
+    check(stale.up_to_date === false && stale.stale[0]?.reason === "differs", "dropping the server makes gen.go stale");
+
+    const strict = parse(
+      await bridge.call("tools/call", {
+        name: "generate",
+        arguments: { dir: genDir, spec: "openapi.yml", strict: true, mode: "dry_run" },
+      }),
+    );
+    check(strict.ok === false, "strict fails on the warning");
+
+    const noSpec = await bridge.call("tools/call", { name: "generate", arguments: { dir: home } });
+    check(noSpec.result?.isError === true, "no spec and no codegen.yaml is a tool error");
+  }
 
   console.log("behavior-smoke: ok");
 } finally {
